@@ -1,13 +1,12 @@
-feat: Phase3 - DebugConsole集成LogPanel, LOG标签页全面升级
+feat: Phase4 - IDEConsole重构为LogPanel内核, 完成统一日志控制台
 
-LogPanel统一日志控制台 - 第3阶段(DebugConsole集成):
-- DebugConsole LOG标签页: logLabel+logScroll → LogPanel实例
-- 移除 header 中的 AutoScroll / Clear 按钮 (已内置于 LogPanel)
-- contentContainer 类型: Container<ScrollPane> → Container<Actor>
-- showTab() 参数: ScrollPane → Actor
-- refreshData() 移除旧 logLabel 手动更新逻辑 (LogPanel.act() 自管理)
-- 保留全部特色: 抽屉动画 / FPS按钮 / INTRO+INFO标签 / 拖拽调整大小
-- DebugConsole 代码从 326 行精简至 287 行
+LogPanel统一日志控制台 - 第4阶段(IDEConsole替换):
+- IDEConsole 内部用 LogPanel 替代手动渲染逻辑
+  - 移除 logContent(VisLabel) + scrollPane + clearBtn
+  - 新增 getLogPanel() 公开API供外部配置tag过滤等
+  - 底部栏预览改用 LogEntry 结构化数据
+- 保留折叠/展开外壳行为 (toggle / setExpanded)
+- IDEConsole 代码从 130 行精简至 105 行
 - 全部 39 个测试通过, 无回归
 - 新增GDEngineConfig解耦接口(替代项目层BuildConfig直接引用)
 - 新增SelectionNavigator接口(替代项目层InputManager直接引用)
