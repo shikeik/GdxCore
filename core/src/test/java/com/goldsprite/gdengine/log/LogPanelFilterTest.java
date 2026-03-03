@@ -1,12 +1,12 @@
 package com.goldsprite.gdengine.log;
 
-import org.junit.Before;
-import org.junit.Test;
-
 import java.util.EnumSet;
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * LogPanel 筛选逻辑 单元测试。

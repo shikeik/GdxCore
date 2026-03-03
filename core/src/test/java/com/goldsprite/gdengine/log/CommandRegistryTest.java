@@ -1,11 +1,12 @@
 package com.goldsprite.gdengine.log;
 
-import org.junit.Before;
-import org.junit.Test;
-
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * CommandRegistry 命令注册表 单元测试。
