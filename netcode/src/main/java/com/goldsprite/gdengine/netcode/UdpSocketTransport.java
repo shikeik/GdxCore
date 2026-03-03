@@ -196,6 +196,37 @@ public class UdpSocketTransport implements Transport {
         return !isServerIdentity;
     }
 
+    /**
+     * 客户端重连: 关闭旧 socket，创建新 socket，重新发送握手包。
+     * 适用于移动网络切换（data toggle）后 socket 绑定的网络接口失效的场景。
+     */
+    public void reconnect() {
+        if (isServerIdentity || serverAddress == null) return;
+
+        // 停止旧接收循环
+        running.set(false);
+        if (receiveThread != null) {
+            receiveThread.interrupt();
+        }
+        if (socket != null && !socket.isClosed()) {
+            socket.close();
+        }
+
+        // 创建新 socket 并重新握手
+        try {
+            socket = new DatagramSocket();
+            socket.setSoTimeout(SOCKET_TIMEOUT_MS);
+            running.set(true);
+            startReceiveLoop();
+
+            // 重新发送握手包，让 Server 识别我们的新地址
+            sendRaw(HANDSHAKE_MAGIC, serverAddress);
+            DLog.logT("Netcode", "[UdpTransport] Client 重连尝试: " + serverAddress);
+        } catch (SocketException e) {
+            DLog.logErr("[UdpTransport] Client 重连失败: " + e.getMessage());
+        }
+    }
+
     /** 返回历史连接过的客户端总数（包含已断开的，用于 clientId 索引） */
     public int getClientCount() {
         return clientAddresses.size();

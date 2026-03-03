@@ -372,6 +372,21 @@ public class ReliableUdpTransport implements Transport {
     /** 获取距离上次收到任何数据的时间(ms) */
     public long getTimeSinceLastRecvMs() { return System.currentTimeMillis() - lastRecvTimeMs; }
 
+    /**
+     * 客户端重连: 重新创建底层 socket 并发送握手。
+     * 重置可靠层接收状态（序列号追踪器），确保重连后不会因序列号不匹配而丢弃有效数据。
+     */
+    public void reconnect() {
+        rawTransport.reconnect();
+        // 重置可靠层状态，确保重连后序列号同步
+        pendingBuffer.clear();
+        receiveTracker.reset();
+        sendSeqNum = 0;
+        lastReceivedSeqNum = 0;
+        // 刷新心跳时间戳，避免重连后立即触发心跳超时
+        lastRecvTimeMs = System.currentTimeMillis();
+    }
+
     /** 获取指定客户端距离上次收到数据的时间(ms)（Server 端） */
     public long getClientTimeSinceLastRecvMs(int clientId) {
         Long t = clientLastRecvTimeMs.get(clientId);
@@ -645,6 +660,12 @@ public class ReliableUdpTransport implements Transport {
 
         public int getHighestAccepted() {
             return highestAccepted;
+        }
+
+        /** 重置追踪器状态（重连时使用） */
+        public void reset() {
+            highestAccepted = -1;
+            java.util.Arrays.fill(receivedBits, false);
         }
     }
 }
