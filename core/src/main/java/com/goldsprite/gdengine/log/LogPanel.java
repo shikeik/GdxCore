@@ -12,6 +12,7 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.ui.Cell;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.goldsprite.gdengine.PlatformProfile;
 import com.goldsprite.gdengine.ui.widget.HoverFocusScrollPane;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTable;
@@ -266,7 +267,7 @@ public class LogPanel extends VisTable {
 	private void buildLogArea() {
 		logLabel = new VisLabel("", "small");
 		logLabel.setWrap(true);
-		logLabel.setFontScale(0.75f);
+		logLabel.setFontScale(PlatformProfile.get().logPanelFontScale);
 		logScroll = new HoverFocusScrollPane(logLabel);
 		logScroll.setFadeScrollBars(false);
 		add(logScroll).grow().pad(2).row();

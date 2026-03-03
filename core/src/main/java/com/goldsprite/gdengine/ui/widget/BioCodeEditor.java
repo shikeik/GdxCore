@@ -16,6 +16,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Align;
 import com.goldsprite.gdengine.assets.FontUtils;
+import com.goldsprite.gdengine.PlatformProfile;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTable;
@@ -41,7 +42,7 @@ public class BioCodeEditor extends VisTable {
 	private Runnable onTextChangedCallback;
 
 	public BioCodeEditor() {
-		this(1.3f);
+		this(PlatformProfile.get().codeEditorFontScale);
 	}
 	public BioCodeEditor(float baseFntScale) {
 		super();

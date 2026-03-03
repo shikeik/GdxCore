@@ -1,23 +1,23 @@
 package com.goldsprite.gdengine.screens;
 
+import java.util.Stack;
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
-import com.badlogic.gdx.math.Vector2;
 import com.goldsprite.gdengine.PlatformImpl;
+import com.goldsprite.gdengine.PlatformProfile;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.neonbatch.NeonStage;
 import com.goldsprite.gdengine.ui.widget.BaseDialog;
-import java.util.Stack;
-import com.goldsprite.gdengine.log.DLog;
 
 
 /**
@@ -57,7 +57,7 @@ public abstract class GScreen extends ScreenAdapter {
 
 	//ExampleGScreen Logic
 	// 1. 定义基准尺寸 (540p)
-	protected float uiViewportScale = PlatformImpl.isAndroidUser() ? 2f : 1.3f; // 保持原本的缩放系数
+	protected float uiViewportScale = PlatformProfile.get().uiViewportScale; // 从平台配置中心获取
 	protected float viewSizeShort = 540f;
 	protected float viewSizeLong = 960f;
 

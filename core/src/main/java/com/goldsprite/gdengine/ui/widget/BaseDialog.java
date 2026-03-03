@@ -1,6 +1,7 @@
 package com.goldsprite.gdengine.ui.widget;
 
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.goldsprite.gdengine.PlatformProfile;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.kotcrab.vis.ui.util.TableUtils;
@@ -16,7 +17,7 @@ public class BaseDialog extends VisDialog {
 
 	public BaseDialog(String title) {
 		super(title);
-		getTitleLabel().setFontScale(0.95f); // 字体太大修正
+		getTitleLabel().setFontScale(PlatformProfile.get().dialogTitleFontScale);
 		setModal(true);
 		addCloseButton();
 	}

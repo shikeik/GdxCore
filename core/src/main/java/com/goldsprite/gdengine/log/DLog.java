@@ -11,7 +11,7 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.Logger;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.goldsprite.gdengine.GDEngineConfig;
-import com.goldsprite.gdengine.PlatformImpl;
+import com.goldsprite.gdengine.PlatformProfile;
 import com.goldsprite.gdengine.screens.ScreenManager;
 
 public class DLog {
@@ -481,7 +481,7 @@ public class DLog {
 	public void resize(int w, int h) {
 		if (stage == null) return;
 
-		scl = PlatformImpl.isAndroidUser() ? 1.4f : 2f;
+		scl = PlatformProfile.get().ideConsoleViewportScale;
 		ExtendViewport vp = (ExtendViewport) stage.getViewport();
 		if (h > w) {
 			vp.setMinWorldWidth(LOGICAL_SHORT * scl);
