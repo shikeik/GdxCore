@@ -11,6 +11,15 @@ buildscript {
         maven { url 'https://maven.aliyun.com/repository/google' }
         maven { url "https://jitpack.io" }
     }
+    dependencies {
+        classpath 'com.github.shikeik:GdxGradle:0.9.0'
+    }
+}
+
+apply plugin: 'com.goldsprite.gdx-tasks'
+
+gdxTasks {
+    taskGroup = 'gdxcore'
 }
 
 subprojects {
