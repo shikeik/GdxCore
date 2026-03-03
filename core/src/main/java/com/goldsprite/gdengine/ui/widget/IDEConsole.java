@@ -1,15 +1,16 @@
 package com.goldsprite.gdengine.ui.widget;
 
+import java.util.List;
+
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.ui.Cell;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.utils.Align;
+import com.goldsprite.gdengine.log.DLog;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
-import java.util.List;
-import com.badlogic.gdx.utils.Align;
-import com.goldsprite.gdengine.log.DLog;
 
 public class IDEConsole extends VisTable {
 
@@ -56,7 +57,7 @@ public class IDEConsole extends VisTable {
 		clearBtn.addListener(new ClickListener() {
 			@Override
 			public void clicked(InputEvent event, float x, float y) {
-				DLog.getLogs().clear();
+				DLog.clearAllLogs();
 				updateLogText();
 			}
 		});

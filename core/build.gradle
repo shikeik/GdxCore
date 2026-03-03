@@ -2,6 +2,8 @@
 // 包含引擎基础功能: 日志、屏幕管理、UI组件、资源工具等
 
 dependencies {
+    testImplementation 'junit:junit:4.13.2'
+
     api "com.badlogicgames.gdx:gdx:${rootProject.properties.gdxVersion}"
     api "com.badlogicgames.gdx:gdx-freetype:${rootProject.properties.gdxVersion}"
     api "com.badlogicgames.gdx:gdx-tools:${rootProject.properties.gdxVersion}"

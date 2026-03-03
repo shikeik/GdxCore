@@ -48,6 +48,8 @@ public class DLog {
 
 	// 数据层 (构造时即可用)
 	public static List<String> logMessages = new CopyOnWriteArrayList<>();
+	/** 结构化日志条目列表，供 LogPanel 筛选使用 */
+	public static List<LogEntry> logEntries = new CopyOnWriteArrayList<>();
 	public static boolean showDebugUI = true;
 	public static boolean shortcuts = true;
 	static int maxLogsCache = 100;
@@ -89,6 +91,17 @@ public class DLog {
 	public static List<String> getLogs() {
 		getInstance();
 		return logMessages;
+	}
+
+	/** 获取结构化日志条目列表 (供 LogPanel 筛选使用) */
+	public static List<LogEntry> getLogEntries() {
+		return logEntries;
+	}
+
+	/** 清空所有日志 (同步清理 logMessages + logEntries) */
+	public static void clearAllLogs() {
+		logMessages.clear();
+		logEntries.clear();
 	}
 
 	// --- 数据接口 ---
@@ -256,19 +269,14 @@ public class DLog {
 				}
 			}
 
+			// 双写: 旧的纯字符串列表 (向后兼容) + 新的结构化条目列表
 			logMessages.add(fullMsg);
+			logEntries.add(new LogEntry(level, tag, time, msg, fullMsg));
 
 			// 限制缓存大小，防止内存溢出
 			if (logMessages.size() > maxLogsCache) {
-				// 简单的清理策略：移除前 10%
-				int removeCount = maxLogsCache / 10;
-				if (removeCount < 1) removeCount = 1;
-				// CopyOnWriteArrayList 移除开销较大，但在调试模式下可接受
-				// 且 logMessages 主要用于 UI 展示，频率通常受控
-				// 这里为了简单，先不做批量移除，依赖 list 自身操作
-				// 实际上 CopyOnWriteArrayList 不适合频繁修改，如果性能有问题后续需优化
-				// 但考虑到这是调试工具，暂且保留
 				logMessages.subList(0, logMessages.size() - maxLogsCache).clear();
+				logEntries.subList(0, logEntries.size() - maxLogsCache).clear();
 			}
 		}
 	}

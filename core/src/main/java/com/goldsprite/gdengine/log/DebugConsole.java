@@ -13,12 +13,12 @@ import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
-import com.kotcrab.vis.ui.widget.VisLabel;
-import com.kotcrab.vis.ui.widget.VisTable;
-import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.goldsprite.gdengine.assets.ColorTextureUtils;
 import com.goldsprite.gdengine.assets.VisUIHelper;
 import com.goldsprite.gdengine.ui.widget.HoverFocusScrollPane;
+import com.kotcrab.vis.ui.widget.VisLabel;
+import com.kotcrab.vis.ui.widget.VisTable;
+import com.kotcrab.vis.ui.widget.VisTextButton;
 
 /**
  * 调试控制台 (抽屉动画版)
@@ -125,7 +125,7 @@ public class DebugConsole extends Group {
 		btnClear.addListener(new ClickListener() {
 			@Override
 			public void clicked(InputEvent event, float x, float y) {
-				DLog.logMessages.clear();
+				DLog.clearAllLogs();
 				logLabel.setText(""); // 立即清空文本
 			}
 		});

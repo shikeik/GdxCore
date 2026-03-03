@@ -1,8 +1,11 @@
-chore(project): 初始化GdxCore引擎库项目
+feat: Phase0 - 新增LogEntry结构化日志条目, DLog双写支持
 
-从SandTank提取gdengine包为独立多模块Gradle库项目:
-- core模块: 日志、屏幕管理、UI组件、资源工具等(48文件)
-- netcode模块: 网络联机框架、Supabase集成(21文件)
+LogPanel统一日志控制台 - 第0阶段(数据层):
+- 新增 LogEntry 结构化日志条目 (level/tag/time/message/formatted + matchesSearch)
+- DLog.GdxUiOutput 双写: logMessages + logEntries 并行存储
+- 新增 DLog.getLogEntries() / clearAllLogs() 静态方法
+- DebugConsole / IDEConsole 清除按钮统一改用 clearAllLogs()
+- 新增 JUnit 4.13.2 测试依赖, 17个单元测试全部通过
 - 新增GDEngineConfig解耦接口(替代项目层BuildConfig直接引用)
 - 新增SelectionNavigator接口(替代项目层InputManager直接引用)
 - ThreadedDownload.download()参数化(移除硬编码URL)
