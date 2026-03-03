@@ -181,6 +181,51 @@ public class ServerConsole extends Thread {
             System.out.println("  正在优雅关闭服务器...");
             server.requestShutdown();
         });
+
+        registerCommand("loglevel", "查看/修改日志等级 (用法: loglevel [等级] [标签])", args -> {
+            String[] parts = args.trim().split("\\s+");
+            if (args.trim().isEmpty()) {
+                // 无参数: 显示当前等级
+                System.out.println("  全局日志等级: " + DLog.getGlobalLogLevel().name());
+                System.out.println("  可用等级: DEBUG / INFO / WARN / ERROR");
+                System.out.println("  用法: loglevel <等级>          设置全局等级");
+                System.out.println("        loglevel <等级> <标签>   设置指定标签等级");
+                System.out.println("        loglevel reset <标签>   重置标签等级为全局");
+                return;
+            }
+
+            String levelStr = parts[0].toUpperCase();
+
+            // reset 子命令: 重置指定标签的等级覆盖
+            if ("RESET".equals(levelStr)) {
+                if (parts.length < 2) {
+                    DLog.clearTagLogLevels();
+                    System.out.println("  已清除所有标签等级覆盖");
+                } else {
+                    DLog.setTagLogLevel(parts[1], null);
+                    System.out.println("  已重置标签 [" + parts[1] + "] 的等级覆盖");
+                }
+                return;
+            }
+
+            DLog.Level level = DLog.parseLevel(levelStr);
+            if (level == null) {
+                System.out.println("  无效的日志等级: " + levelStr);
+                System.out.println("  可用等级: DEBUG / INFO / WARN / ERROR");
+                return;
+            }
+
+            if (parts.length >= 2) {
+                // 按标签设置
+                String tag = parts[1];
+                DLog.setTagLogLevel(tag, level);
+                System.out.println("  标签 [" + tag + "] 日志等级已设置为: " + level.name());
+            } else {
+                // 全局设置
+                DLog.setGlobalLogLevel(level);
+                System.out.println("  全局日志等级已设置为: " + level.name());
+            }
+        });
     }
 
     // ══════════════ 内部类 ══════════════

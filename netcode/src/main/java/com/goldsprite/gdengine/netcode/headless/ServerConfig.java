@@ -36,6 +36,12 @@ public class ServerConfig {
     /** 友军伤害 */
     public boolean friendlyFire = false;
 
+    // ── 云大厅 ──
+    /** 是否注册到云大厅（让客户端在房间列表中发现此服务器） */
+    public boolean enableLobby = true;
+    /** 房间显示名称 */
+    public String roomName = "Dedicated Server";
+
     // ── 日志 ──
     /** 日志级别: DEBUG / INFO / WARN / ERROR */
     public String logLevel = "INFO";
@@ -64,6 +70,9 @@ public class ServerConfig {
                 config.map         = props.getProperty("server.map", config.map);
                 config.friendlyFire = Boolean.parseBoolean(
                         props.getProperty("server.friendly-fire", String.valueOf(config.friendlyFire)));
+                config.enableLobby = Boolean.parseBoolean(
+                        props.getProperty("server.enable-lobby", String.valueOf(config.enableLobby)));
+                config.roomName    = props.getProperty("server.room-name", config.roomName);
                 config.logLevel    = props.getProperty("log.level", config.logLevel);
                 config.logFile     = props.getProperty("log.file", config.logFile);
                 DLog.log("ServerConfig", "已从 server.properties 加载配置");
@@ -100,6 +109,12 @@ public class ServerConfig {
                 case "--log-file":
                     config.logFile = args[++i];
                     break;
+                case "--room-name":
+                    config.roomName = args[++i];
+                    break;
+                case "--no-lobby":
+                    config.enableLobby = false;
+                    break;
                 case "--help":
                     printUsage();
                     System.exit(0);
@@ -126,6 +141,8 @@ public class ServerConfig {
         System.out.println("  --friendly-fire <bool> 友军伤害 (默认: false)");
         System.out.println("  --log-level <级别>   日志级别: DEBUG/INFO/WARN/ERROR (默认: INFO)");
         System.out.println("  --log-file <路径>    日志输出文件 (默认: 仅控制台)");
+        System.out.println("  --room-name <名称>   房间显示名称 (默认: Dedicated Server)");
+        System.out.println("  --no-lobby           禁用云大厅注册 (仅局域网/直连)");
         System.out.println("  --help               显示此帮助信息");
     }
 
@@ -139,6 +156,8 @@ public class ServerConfig {
                 ", map='" + map + '\'' +
                 ", friendlyFire=" + friendlyFire +
                 ", logLevel='" + logLevel + '\'' +
+                ", enableLobby=" + enableLobby +
+                ", roomName='" + roomName + '\'' +
                 '}';
     }
 

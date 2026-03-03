@@ -10,6 +10,9 @@ import com.goldsprite.gdengine.netcode.NetworkConnectionListener;
 import com.goldsprite.gdengine.netcode.NetworkManager;
 import com.goldsprite.gdengine.netcode.ReliableUdpTransport;
 import com.goldsprite.gdengine.netcode.UdpSocketTransport;
+import com.goldsprite.gdengine.netcode.supabase.PresenceLobbyManager;
+import com.goldsprite.gdengine.netcode.supabase.PresenceRoomInfo;
+import com.goldsprite.gdengine.netcode.supabase.PublicIPResolver;
 
 /**
  * 通用无头（Headless）服务器骨架。
@@ -44,6 +47,10 @@ public abstract class HeadlessGameServer extends ApplicationAdapter {
 
     // ── 控制台 ──
     protected ServerConsole console;
+
+    // ── 云大厅 ──
+    protected PresenceLobbyManager lobbyManager;
+    protected PresenceRoomInfo roomInfo;
 
     // ── 关闭标志 ──
     private volatile boolean shutdownRequested = false;
@@ -122,6 +129,9 @@ public abstract class HeadlessGameServer extends ApplicationAdapter {
     public void create() {
         printBanner();
 
+        // 0. 配置日志等级
+        configureLogLevel();
+
         // 1. 初始化网络传输层
         rawTransport = new UdpSocketTransport(true); // isServer = true
         transport = new ReliableUdpTransport(rawTransport);
@@ -144,6 +154,7 @@ public abstract class HeadlessGameServer extends ApplicationAdapter {
                     }
                     DLog.logT("Server", "客户端连接 #" + clientId);
                     onPlayerConnected(clientId, manager);
+                    updateLobbyPlayerCount();
                 });
             }
 
@@ -152,6 +163,7 @@ public abstract class HeadlessGameServer extends ApplicationAdapter {
                 // 此回调在 NetworkManager.tickInternal() 主线程中触发
                 DLog.logT("Server", "客户端断开 #" + clientId);
                 onPlayerDisconnected(clientId);
+                updateLobbyPlayerCount();
             }
         });
 
@@ -171,6 +183,11 @@ public abstract class HeadlessGameServer extends ApplicationAdapter {
         DLog.logT("Server", "服务器已启动 | 端口: " + config.port
                 + " | TickRate: " + config.tickRate + "Hz"
                 + " | 最大玩家: " + config.maxPlayers);
+
+        // 8. 注册到云大厅（可选）
+        if (config.enableLobby) {
+            initCloudLobby();
+        }
     }
 
     @Override
@@ -199,6 +216,11 @@ public abstract class HeadlessGameServer extends ApplicationAdapter {
 
     @Override
     public void dispose() {
+        if (lobbyManager != null) {
+            lobbyManager.disconnect();
+            lobbyManager = null;
+            DLog.logT("Server", "已从云大厅注销");
+        }
         if (console != null) {
             console.shutdown();
         }
@@ -266,5 +288,116 @@ public abstract class HeadlessGameServer extends ApplicationAdapter {
         System.out.println("  端口: " + config.port + " | TickRate: " + config.tickRate + "Hz");
         System.out.println("  输入 'help' 查看可用命令");
         System.out.println("========================================");
+    }
+
+    /**
+     * 根据 ServerConfig.logLevel 配置 DLog 全局日志等级。
+     * 支持 DEBUG / INFO / WARN / ERROR 四级。
+     */
+    private void configureLogLevel() {
+        DLog.Level level = DLog.parseLevel(config.logLevel);
+        if (level != null) {
+            DLog.setGlobalLogLevel(level);
+            DLog.logT("Server", "日志等级已设置为: " + level.name());
+        } else {
+            DLog.logWarnT("Server", "未知日志等级: " + config.logLevel + "，使用默认 DEBUG");
+        }
+    }
+
+    // ══════════════════════════════════════════
+    //  云大厅集成
+    // ══════════════════════════════════════════
+
+    /**
+     * 初始化云大厅连接并在频道就绪后自动发布房间。
+     * <p>
+     * 连接成功且加入频道后，会异步获取公网 IP 并发布房间元数据，
+     * 使客户端在 SupabaseLobbyScreen 中能发现此服务器。
+     */
+    private void initCloudLobby() {
+        DLog.logT("Server", "正在连接云大厅...");
+        lobbyManager = new PresenceLobbyManager();
+        lobbyManager.connect(
+            // 服务端不关心其他房间的同步事件
+            rooms -> { },
+            new PresenceLobbyManager.OnStatusListener() {
+                @Override
+                public void onConnected() {
+                    DLog.logT("Server", "云大厅 WebSocket 已连接");
+                }
+
+                @Override
+                public void onJoined() {
+                    DLog.logT("Server", "已加入云大厅频道，正在发布房间...");
+                    publishServerRoom();
+                }
+
+                @Override
+                public void onError(String message) {
+                    DLog.logWarnT("Server", "云大厅错误: " + message);
+                }
+
+                @Override
+                public void onDisconnected(String reason) {
+                    DLog.logWarnT("Server", "云大厅连接断开: " + reason);
+                }
+            }
+        );
+    }
+
+    /**
+     * 获取公网 IP 并发布房间到 Presence 大厅。
+     * 若公网 IP 获取失败，则使用局域网 IP 作为 fallback。
+     */
+    private void publishServerRoom() {
+        final String localIp = PublicIPResolver.getLocalIP();
+
+        PublicIPResolver.resolvePublicIP(new PublicIPResolver.ResolveCallback() {
+            @Override
+            public void onSuccess(final String publicIp) {
+                Gdx.app.postRunnable(() -> {
+                    roomInfo = new PresenceRoomInfo(
+                        config.roomName, publicIp, localIp, config.port,
+                        getOnlinePlayerCount(), config.maxPlayers
+                    );
+                    lobbyManager.publishRoom(roomInfo);
+                    DLog.logT("Server", "房间已发布到云大厅: " + config.roomName
+                        + " | 公网=" + publicIp + " 局域网=" + localIp
+                        + " 端口=" + config.port);
+                });
+            }
+
+            @Override
+            public void onError(final Throwable t) {
+                Gdx.app.postRunnable(() -> {
+                    DLog.logWarnT("Server", "获取公网IP失败，使用局域网IP注册: " + t.getMessage());
+                    roomInfo = new PresenceRoomInfo(
+                        config.roomName, localIp, localIp, config.port,
+                        getOnlinePlayerCount(), config.maxPlayers
+                    );
+                    lobbyManager.publishRoom(roomInfo);
+                    DLog.logT("Server", "房间已发布到云大厅(局域网): " + config.roomName
+                        + " | IP=" + localIp + " 端口=" + config.port);
+                });
+            }
+        });
+    }
+
+    /**
+     * 更新云大厅中的房间人数。
+     * 在玩家连接/断开后自动调用。
+     */
+    protected void updateLobbyPlayerCount() {
+        if (lobbyManager != null && lobbyManager.isReady() && roomInfo != null) {
+            int count = getOnlinePlayerCount();
+            roomInfo.currentPlayers = count;
+            // 人满时更新状态为 full，否则恢复 waiting
+            if (count >= config.maxPlayers) {
+                roomInfo.status = "full";
+            } else {
+                roomInfo.status = "waiting";
+            }
+            lobbyManager.updateRoom(roomInfo);
+        }
     }
 }

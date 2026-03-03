@@ -4,6 +4,8 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import com.badlogic.gdx.Gdx;
@@ -131,6 +133,64 @@ public class DLog {
 	// [新增] 日志等级枚举
 	public enum Level {
 		DEBUG, INFO, WARN, ERROR
+	}
+
+	// ── 日志等级过滤 ──
+	/** 全局最低日志等级 (低于此等级的消息将被丢弃)。默认 DEBUG = 全部通过。 */
+	private static volatile Level globalMinLevel = Level.DEBUG;
+	/** 按标签设置的最低日志等级覆盖 (优先级高于全局等级) */
+	private static final Map<String, Level> tagMinLevels = new ConcurrentHashMap<>();
+
+	/**
+	 * 设置全局最低日志等级。
+	 * 低于此等级的日志将被丢弃（ERROR &gt; WARN &gt; INFO &gt; DEBUG）。
+	 * @param level 最低等级，null 则重置为 DEBUG
+	 */
+	public static void setGlobalLogLevel(Level level) {
+		globalMinLevel = (level != null) ? level : Level.DEBUG;
+	}
+
+	/** 获取当前全局最低日志等级 */
+	public static Level getGlobalLogLevel() {
+		return globalMinLevel;
+	}
+
+	/**
+	 * 为指定标签设置最低日志等级（覆盖全局等级）。
+	 * @param tag   日志标签
+	 * @param level 最低等级，null 则移除该标签的覆盖（回退到全局等级）
+	 */
+	public static void setTagLogLevel(String tag, Level level) {
+		if (tag == null) return;
+		if (level != null) {
+			tagMinLevels.put(tag, level);
+		} else {
+			tagMinLevels.remove(tag);
+		}
+	}
+
+	/** 获取指定标签的有效最低日志等级（优先取标签覆盖，否则返回全局等级） */
+	public static Level getEffectiveLogLevel(String tag) {
+		Level tagLevel = tagMinLevels.get(tag);
+		return (tagLevel != null) ? tagLevel : globalMinLevel;
+	}
+
+	/** 清除所有按标签的等级覆盖 */
+	public static void clearTagLogLevels() {
+		tagMinLevels.clear();
+	}
+
+	/**
+	 * 从字符串解析日志等级 (不区分大小写)。
+	 * @return 解析结果，无法识别时返回 null
+	 */
+	public static Level parseLevel(String str) {
+		if (str == null || str.isEmpty()) return null;
+		try {
+			return Level.valueOf(str.trim().toUpperCase());
+		} catch (IllegalArgumentException e) {
+			return null;
+		}
 	}
 
 	// [新增] 日志输出接口
@@ -284,6 +344,12 @@ public class DLog {
 	// --- 统一分发逻辑 ---
 
 	private static void dispatch(Level level, String tag, Object... values) {
+		// 0. 日志等级过滤（低于有效最低等级的消息直接丢弃）
+		Level minLevel = getEffectiveLogLevel(tag);
+		if (level.ordinal() < minLevel.ordinal()) {
+			return;
+		}
+
 		// 1. 黑白名单检查
 		if (banTag(tag)) {
 			// 如果被拦截，且是拦截模式下的特殊显示，则走特定逻辑 (仅针对 logT/DEBUG)
