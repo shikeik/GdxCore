@@ -129,6 +129,19 @@ public class ReliableUdpTransport implements Transport {
         clientReceiveTrackers.clear();
     }
 
+    /**
+     * 断开指定客户端的连接（Server 端调用）。
+     * <p>
+     * 向客户端发送断线通知，并清理该客户端的可靠层状态。
+     *
+     * @param clientId 要断开的客户端 ID
+     */
+    public void disconnectClient(int clientId) {
+        rawTransport.disconnectClient(clientId);
+        clientReceiveTrackers.remove(clientId);
+        clientLastRecvTimeMs.remove(clientId);
+    }
+
     @Override
     public void sendToClient(int clientId, byte[] payload) {
         byte[] wrapped = wrapPayload(payload);

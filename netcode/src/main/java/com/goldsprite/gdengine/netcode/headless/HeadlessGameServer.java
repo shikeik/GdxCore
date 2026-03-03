@@ -1,6 +1,8 @@
 package com.goldsprite.gdengine.netcode.headless;
 
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 import com.badlogic.gdx.ApplicationAdapter;
@@ -119,6 +121,19 @@ public abstract class HeadlessGameServer extends ApplicationAdapter {
      */
     public Set<Integer> getOnlinePlayerIds() {
         return Collections.emptySet();
+    }
+
+    /**
+     * 返回在线玩家 ID 到名称的映射（供控制台 players 命令显示）。
+     * <p>
+     * 默认使用 "Player#id" 格式。子类可覆写以提供真实玩家名称。
+     */
+    public Map<Integer, String> getPlayerNames() {
+        Map<Integer, String> names = new HashMap<>();
+        for (int id : getOnlinePlayerIds()) {
+            names.put(id, "Player#" + id);
+        }
+        return names;
     }
 
     // ══════════════════════════════════════════
@@ -259,15 +274,38 @@ public abstract class HeadlessGameServer extends ApplicationAdapter {
     }
 
     /**
-     * 踢出指定玩家（从网络层 despawn + 触发子类清理）。
+     * 踢出指定玩家（发送踢出通知 → despawn → 触发子类清理 → 断开传输层连接）。
      * 可由控制台命令或业务逻辑调用。
+     *
+     * @param clientId 要踢出的客户端 ID
      */
     public void kickPlayer(int clientId) {
+        // 1. 子类可在此发送踢出通知 RPC（在 despawn 前执行，确保客户端收到）
+        onBeforeKick(clientId);
+        // 2. 清除该玩家的所有网络对象
         if (manager != null) {
             manager.despawnByOwner(clientId);
         }
+        // 3. 触发子类业务清理
         onPlayerDisconnected(clientId);
+        // 4. 断开传输层连接（使客户端检测到断线）
+        if (transport != null) {
+            transport.disconnectClient(clientId);
+        }
+        updateLobbyPlayerCount();
         DLog.logT("Server", "已踢出玩家 #" + clientId);
+    }
+
+    /**
+     * 踢出玩家前的钩子方法——子类可覆写以发送踢出通知 RPC。
+     * <p>
+     * 此方法在 {@code despawnByOwner} 调用之前执行，确保客户端仍拥有网络对象可以接收 RPC。
+     * 默认空实现。
+     *
+     * @param clientId 即将被踢出的客户端 ID
+     */
+    protected void onBeforeKick(int clientId) {
+        // 默认无操作，子类覆写以发送 rpcKicked 等通知
     }
 
     // ══════════════════════════════════════════

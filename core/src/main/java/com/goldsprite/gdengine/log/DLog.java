@@ -66,6 +66,9 @@ public class DLog {
 		blackList.add("拦截");
 		blackList.add("InputManager");
 		blackList.add("VirtualKeyboard");
+		// 大厅心跳/线路级别日志默认拦截，避免每30秒刷屏
+		blackList.add("PhoenixHB");
+		blackList.add("PhoenixWire");
 
 		// [新增] 注册默认输出端
 		registerLogOutput(new StandardOutput());

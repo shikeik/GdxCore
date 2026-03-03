@@ -247,6 +247,26 @@ public class UdpSocketTransport implements Transport {
         activeClientIds.remove(clientId);
     }
 
+    /**
+     * 主动断开指定客户端的连接（Server 端调用）。
+     * <p>
+     * 发送断线通知包给客户端，并将其标记为非活跃。
+     *
+     * @param clientId 要断开的客户端 ID
+     */
+    public void disconnectClient(int clientId) {
+        if (!isServerIdentity) return;
+        if (clientId >= 0 && clientId < clientAddresses.size()) {
+            InetSocketAddress addr = clientAddresses.get(clientId);
+            // 发送 3 次断线通知（UDP 不可靠，冗余发送提高送达率）
+            for (int i = 0; i < 3; i++) {
+                try { sendRaw(DISCONNECT_MAGIC, addr); } catch (Exception ignored) { }
+            }
+            activeClientIds.remove(clientId);
+            DLog.logT("Netcode", "[UdpTransport] Server 主动断开 Client #" + clientId);
+        }
+    }
+
     // ==================== 内部实现 ====================
 
     /**

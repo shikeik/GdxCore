@@ -167,8 +167,13 @@ public class ChatChannel {
             if ("say".equals(cmd)) {
                 if (!args.isEmpty()) {
                     ChatMessage msg = ChatMessage.chat(senderName, args);
-                    postMessage(msg);
-                    if (networkSender != null) networkSender.sendChat(msg);
+                    if (networkSender != null) {
+                        // 联机模式: 交由网络发送器处理（Host 本地显示+广播 / Client 仅发往服务端）
+                        networkSender.sendChat(msg);
+                    } else {
+                        // 非联网模式: 直接本地显示
+                        postMessage(msg);
+                    }
                 }
                 return;
             }
@@ -185,8 +190,15 @@ public class ChatChannel {
         } else {
             // ── 聊天模式 ──
             ChatMessage msg = ChatMessage.chat(senderName, input);
-            postMessage(msg);
-            if (networkSender != null) networkSender.sendChat(msg);
+            if (networkSender != null) {
+                // 联机模式: 交由网络发送器处理
+                // Host: 本地显示 + 广播给所有客户端
+                // Client: 仅发送 ServerRpc，等待服务端广播后再显示
+                networkSender.sendChat(msg);
+            } else {
+                // 非联网模式: 直接本地显示
+                postMessage(msg);
+            }
         }
     }
 

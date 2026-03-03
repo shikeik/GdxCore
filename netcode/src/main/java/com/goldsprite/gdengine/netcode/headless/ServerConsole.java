@@ -152,14 +152,14 @@ public class ServerConsole extends Thread {
         });
 
         registerCommand("players", "列出所有在线玩家", args -> {
-            java.util.Set<Integer> playerIds = server.getOnlinePlayerIds();
-            if (playerIds.isEmpty()) {
+            java.util.Map<Integer, String> playerNames = server.getPlayerNames();
+            if (playerNames.isEmpty()) {
                 System.out.println("  当前无玩家在线");
                 return;
             }
             System.out.println("  ── 在线玩家 ──");
-            for (int id : playerIds) {
-                System.out.printf("  #%d%n", id);
+            for (java.util.Map.Entry<Integer, String> entry : playerNames.entrySet()) {
+                System.out.printf("  #%-4d  %s%n", entry.getKey(), entry.getValue());
             }
         });
 

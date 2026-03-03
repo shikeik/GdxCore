@@ -28,6 +28,10 @@ import com.goldsprite.gdengine.log.DLog;
 public class PhoenixChannel {
 
     private static final String TAG = "PhoenixChannel";
+    /** 心跳专用标签（默认黑名单，避免每30秒刷屏） */
+    private static final String TAG_HEARTBEAT = "PhoenixHB";
+    /** 协议线路级别日志标签（>>>/<< 原始 JSON 报文） */
+    private static final String TAG_WIRE = "PhoenixWire";
 
     // === Phoenix 协议常量 ===
     private static final String EVENT_PHX_JOIN = "phx_join";
@@ -273,14 +277,14 @@ public class PhoenixChannel {
 
         String msg = sb.toString();
         wsClient.send(msg);
-        DLog.logT(TAG, ">>> " + msg);
+        DLog.logT(TAG_WIRE, ">>> " + msg);
     }
 
     /**
      * 处理从 WebSocket 收到的消息
      */
     private void handleMessage(String message) {
-        DLog.logT(TAG, "<<< " + message);
+        DLog.logT(TAG_WIRE, "<<< " + message);
 
         JsonValue json;
         try {
@@ -295,7 +299,7 @@ public class PhoenixChannel {
 
         // Phoenix 心跳回复
         if (TOPIC_PHOENIX.equals(msgTopic) && EVENT_PHX_REPLY.equals(msgEvent)) {
-            DLog.logT(TAG, "收到心跳回复");
+            DLog.logT(TAG_HEARTBEAT, "收到心跳回复");
             return;
         }
 
@@ -373,7 +377,7 @@ public class PhoenixChannel {
             public void run() {
                 if (wsClient != null && wsClient.isOpen()) {
                     sendMessage(TOPIC_PHOENIX, EVENT_HEARTBEAT, "{}", nextRef(), null);
-                    DLog.logT(TAG, "发送 Phoenix 心跳");
+                    DLog.logT(TAG_HEARTBEAT, "发送 Phoenix 心跳");
                 }
             }
         }, HEARTBEAT_INTERVAL, HEARTBEAT_INTERVAL);
