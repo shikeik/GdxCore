@@ -1,0 +1,13 @@
+// GDEngine - core 模块
+// 包含引擎基础功能: 日志、屏幕管理、UI组件、资源工具等
+
+dependencies {
+    api "com.badlogicgames.gdx:gdx:${rootProject.properties.gdxVersion}"
+    api "com.badlogicgames.gdx:gdx-freetype:${rootProject.properties.gdxVersion}"
+    api "com.badlogicgames.gdx:gdx-tools:${rootProject.properties.gdxVersion}"
+    api "com.kotcrab.vis:vis-ui:${rootProject.properties.visUIVersion}"
+    api "com.badlogicgames.gdx-controllers:gdx-controllers-core:${rootProject.properties.gdxControllersVersion}"
+    api("com.github.raeleus:TenPatch:5.2.3") { exclude group: 'org.lwjgl' }
+    api "com.esotericsoftware.spine:spine-libgdx:${rootProject.properties.spineVersion}"
+    api 'org.nanohttpd:nanohttpd:2.3.1'
+}

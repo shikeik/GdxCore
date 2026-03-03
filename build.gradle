@@ -1,0 +1,55 @@
+// GdxCore 根构建脚本
+// 多模块项目: core + netcode
+
+buildscript {
+    repositories {
+        google()
+        mavenLocal()
+        mavenCentral()
+        gradlePluginPortal()
+        maven { url 'https://maven.aliyun.com/repository/public/' }
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url "https://jitpack.io" }
+    }
+}
+
+subprojects {
+    apply plugin: 'java-library'
+    apply plugin: 'maven-publish'
+
+    group = "${rootProject.properties.jitpackGroup}"
+    version = "${rootProject.properties.projectVersion}"
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(rootProject.properties.jdkVersion as Integer)
+        }
+        withSourcesJar()
+    }
+
+    repositories {
+        google()
+        mavenLocal()
+        mavenCentral()
+        gradlePluginPortal()
+        maven { url 'https://maven.aliyun.com/repository/public/' }
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url "https://jitpack.io" }
+        maven { url 'https://repo1.maven.org/maven2/' }
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+    }
+
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                from components.java
+                groupId = "${rootProject.properties.jitpackGroup}"
+                artifactId = project.name  // 'core' 或 'netcode'
+                version = "${rootProject.properties.projectVersion}"
+            }
+        }
+    }
+}

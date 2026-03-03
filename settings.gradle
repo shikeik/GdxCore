@@ -1,0 +1,4 @@
+rootProject.name = 'GdxCore'
+
+include ':core'
+include ':netcode'

@@ -1,0 +1,492 @@
+package com.goldsprite.gdengine.log;
+
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.utils.Logger;
+import com.badlogic.gdx.utils.viewport.ExtendViewport;
+import com.goldsprite.gdengine.GDEngineConfig;
+import com.goldsprite.gdengine.PlatformImpl;
+import com.goldsprite.gdengine.screens.ScreenManager;
+
+public class DLog {
+	public static final String passStr = "Y";
+	private static final float LOGICAL_SHORT = 540f;
+	private static final float LOGICAL_LONG = 960f;
+	public static boolean singleMode = false;
+	public static String singleTag = "Default";
+	// [新增] 黑白名单模式控制
+	public static boolean isBlackListMode = true; // 默认黑名单模式
+	public static List<String> blackList = new CopyOnWriteArrayList<>(); // 黑名单列表
+	public static String[] showTags = {
+		"Default Y",
+		"拦截 N",
+
+		//GDEngine
+		"ToastUI Y",
+		"ZipDownLoader Y",
+
+		//SandTank
+		"VirtualKeyboard Y",
+		"Settings Y",
+		"InputManager Y",
+
+		// Test
+		"TEST Y",
+		"VERIFY Y",
+		"Test1 Y",
+		"VisualCheck Y",
+	};
+
+	public static String LOG_TAG = GDEngineConfig.getProjectName();
+	private static final Logger logger = new Logger(LOG_TAG);
+
+	// 数据层 (构造时即可用)
+	public static List<String> logMessages = new CopyOnWriteArrayList<>();
+	public static boolean showDebugUI = true;
+	public static boolean shortcuts = true;
+	static int maxLogsCache = 100;
+	// 视口配置
+	static float scl = 2.5f;
+	private static DLog instance;
+	private static final List<String> logInfos = new CopyOnWriteArrayList<>();
+
+	private static final List<LogOutput> outputs = new CopyOnWriteArrayList<>();
+
+	static {
+		blackList.add("拦截");
+		blackList.add("InputManager");
+		blackList.add("VirtualKeyboard");
+
+		// [新增] 注册默认输出端
+		registerLogOutput(new StandardOutput());
+		registerLogOutput(new GdxUiOutput());
+	}
+
+	public DebugConsole console;
+	// 表现层 (延后初始化)
+	private Stage stage;
+
+	// [修改] 构造函数只做最基础的数据准备，绝对不碰 UI
+	public DLog() {
+		instance = this;
+	}
+
+	public static DLog getInstance() {
+		if (instance == null) new DLog();
+		return instance;
+	}
+
+	public static List<String> getAllLogs() {
+		return logMessages;
+	}
+
+	public static List<String> getLogs() {
+		getInstance();
+		return logMessages;
+	}
+
+	// --- 数据接口 ---
+
+	public static String getInfoString() {
+		StringBuilder sb = new StringBuilder();
+		sb.append(GDEngineConfig.getProjectName()).append(": V").append(GDEngineConfig.getVersion());
+		sb.append("\nHeap: ").append(Gdx.app.getJavaHeap() / 1024 / 1024).append("MB");
+		sb.append("\nFPS: ").append(Gdx.graphics.getFramesPerSecond());
+
+		getInstance();
+		if (!logInfos.isEmpty()) {
+			sb.append("\n--- Monitors ---\n");
+			getInstance();
+			sb.append(String.join("\n", logInfos));
+		}
+		return sb.toString();
+	}
+
+	public static void clearInfo() {
+		if (getInstance() != null) {
+			getInstance();
+			logInfos.clear();
+		}
+	}
+
+	// [新增] 日志等级枚举
+	public enum Level {
+		DEBUG, INFO, WARN, ERROR
+	}
+
+	// [新增] 日志输出接口
+	@FunctionalInterface
+	public interface LogOutput {
+		void onLog(Level level, String tag, String msg);
+	}
+
+	/**
+	 * 注册额外的日志输出端 (如 Android Logcat, iOS SystemLog, Server)
+	 */
+	public static void registerLogOutput(LogOutput output) {
+		if (output != null && !outputs.contains(output)) {
+			outputs.add(output);
+		}
+	}
+
+	// --- 默认输出端实现 ---
+
+	/**
+	 * 标准控制台输出 (System.out / System.err)
+	 * 使用 ANSI 转义码在 IDE 控制台和终端中显示颜色
+	 * <p>
+	 * 注意事项：
+	 * - IntelliJ IDEA / VS Code / Windows Terminal 原生支持 ANSI
+	 * - Android Logcat 不支持 ANSI，会自动降级为纯文本
+	 * - System.err 在多数 IDE 中已自带红色高亮，仅追加 ANSI 以保持一致性
+	 */
+	private static class StandardOutput implements LogOutput {
+		// ANSI 转义码常量
+		private static final String RESET  = "\033[0m";
+		private static final String RED    = "\033[91m";   // 亮红
+		private static final String GREEN  = "\033[92m";   // 亮绿（PASS）
+		private static final String YELLOW = "\033[93m";   // 亮黄（WARN）
+		private static final String CYAN   = "\033[96m";   // 亮青（INFO）
+		private static final String WHITE  = "\033[97m";   // 亮白（DEBUG）
+		private static final String ORANGE = "\033[38;5;208m"; // 256色橙色
+		private static final String GRAY   = "\033[90m";   // 暗灰（时间戳）
+
+		// 是否启用 ANSI 颜色（Android Logcat 不支持）
+		private static final boolean ANSI_ENABLED = !isAndroidRuntime();
+
+		private static boolean isAndroidRuntime() {
+			try {
+				Class.forName("android.os.Build");
+				return true;
+			} catch (ClassNotFoundException e) {
+				return false;
+			}
+		}
+
+		@Override
+		public void onLog(Level level, String tag, String msg) {
+			String time = formatTime("HH:mm:ss:SSS");
+
+			if (!ANSI_ENABLED) {
+				// Android 等不支持 ANSI 的平台：纯文本输出
+				String plain = String.format("[%s] [%s] [%s] %s", level.name(), time, tag, msg);
+				if (level == Level.ERROR) {
+					System.err.println(plain);
+				} else {
+					System.out.println(plain);
+				}
+				return;
+			}
+
+			// 根据级别选择颜色
+			String levelColor;
+			String levelLabel;
+			switch (level) {
+				case ERROR:
+					levelColor = RED;
+					levelLabel = "ERROR";
+					break;
+				case WARN:
+					levelColor = YELLOW;
+					levelLabel = "WARN ";
+					break;
+				case INFO:
+					levelColor = CYAN;
+					levelLabel = "INFO ";
+					break;
+				default:
+					levelColor = WHITE;
+					levelLabel = "DEBUG";
+					break;
+			}
+
+			// Tag 特殊着色
+			String tagColor = levelColor;
+			if ("UserProject".equals(tag)) {
+				tagColor = ORANGE;
+			} else if ("AutoTest".equals(tag)) {
+				// AutoTest 的 PASS/FAIL 已通过 level 区分，Tag 用绿色突出
+				tagColor = GREEN;
+			}
+
+			// 组装带 ANSI 颜色的消息: [灰色时间] [彩色级别] [Tag颜色Tag] 消息
+			String fullMsg = String.format("%s[%s]%s %s[%s]%s %s[%s]%s %s%s%s",
+				GRAY, time, RESET,
+				levelColor, levelLabel, RESET,
+				tagColor, tag, RESET,
+				levelColor, msg, RESET);
+
+			if (level == Level.ERROR) {
+				System.err.println(fullMsg);
+			} else {
+				System.out.println(fullMsg);
+			}
+		}
+	}
+
+	/**
+	 * 游戏内 UI 控制台输出
+	 */
+	private static class GdxUiOutput implements LogOutput {
+		@Override
+		public void onLog(Level level, String tag, String msg) {
+			String time = formatTime("HH:mm:ss:SSS");
+			String fullMsg = String.format("[%s] [%s] %s", time, tag, msg);
+
+			// 颜色逻辑与 StandardOutput 保持一致，供 VisUI Label 解析
+			if (level == Level.ERROR) {
+				fullMsg = "[RED]" + fullMsg;
+			} else {
+				if ("UserProject".equals(tag)) {
+					fullMsg = "[ORANGE]" + fullMsg;
+				}
+
+				if (level == Level.WARN) {
+					fullMsg = "[YELLOW]" + fullMsg;
+				} else if (level == Level.INFO) {
+					fullMsg = "[CYAN]" + fullMsg;
+				} else {
+					fullMsg = "[WHITE]" + fullMsg;
+				}
+			}
+
+			logMessages.add(fullMsg);
+
+			// 限制缓存大小，防止内存溢出
+			if (logMessages.size() > maxLogsCache) {
+				// 简单的清理策略：移除前 10%
+				int removeCount = maxLogsCache / 10;
+				if (removeCount < 1) removeCount = 1;
+				// CopyOnWriteArrayList 移除开销较大，但在调试模式下可接受
+				// 且 logMessages 主要用于 UI 展示，频率通常受控
+				// 这里为了简单，先不做批量移除，依赖 list 自身操作
+				// 实际上 CopyOnWriteArrayList 不适合频繁修改，如果性能有问题后续需优化
+				// 但考虑到这是调试工具，暂且保留
+				logMessages.subList(0, logMessages.size() - maxLogsCache).clear();
+			}
+		}
+	}
+
+	// --- 统一分发逻辑 ---
+
+	private static void dispatch(Level level, String tag, Object... values) {
+		// 1. 黑白名单检查
+		if (banTag(tag)) {
+			// 如果被拦截，且是拦截模式下的特殊显示，则走特定逻辑 (仅针对 logT/DEBUG)
+			// 为了简化，这里仅对 DEBUG 级别且开启了"拦截 Y"的情况做特殊处理
+			// 但考虑到逻辑统一，如果被 ban，应该直接返回
+			// 原有逻辑中有个 "拦截 Y" 的特殊分支
+			if (level == Level.DEBUG && showTags[1].equals("拦截 Y")) {
+				// 递归调用自身，但 Tag 变为 "拦截"，可能会绕过 banTag (因为 "拦截" 在白名单里?)
+				// 检查 static 块: blackList.add("拦截"); -> 意味着 "拦截" 也会被 ban?
+				// 原有逻辑：banTag("拦截") -> return blackList.contains("拦截") -> true.
+				// 所以原有逻辑其实是死循环或者无效？
+				// 等等，原有逻辑：
+				// if (banTag(tag)) {
+				//     if (showTags[1].equals("拦截 Y"))
+				//         logT("拦截", "被拦截的: " + formatString(values));
+				//     return;
+				// }
+				// 如果 "拦截" 也在黑名单里，那 logT("拦截") 也会进来然后 return。
+				// 除非 "拦截" 不在黑名单。但 static 块里加了。
+				// 假设用户知道自己在做什么，这里我们暂时保留这个特殊逻辑的意图，
+				// 但为了防止递归栈溢出，我们直接输出到 System.out 调试一下，或者忽略。
+				// 鉴于这是一个复杂的遗留逻辑，我们暂且只做 return。
+			}
+			return;
+		}
+
+		// 2. 格式化内容
+		String content = formatString(values);
+
+		// 3. 分发给所有输出端
+		for (LogOutput output : outputs) {
+			output.onLog(level, tag, content);
+		}
+	}
+
+	public static void log(Object... values) {
+		logT("Default", values);
+	}
+
+	public static void logT(String tag, Object... values) {
+		dispatch(Level.DEBUG, tag, values);
+	}
+
+	public static void logErr(Object... values) {
+		logErrT("Default", values);
+	}
+
+	public static void logErrT(String tag, Object... values) {
+		dispatch(Level.ERROR, tag, values);
+	}
+
+	// [新增] WARN 级别
+	public static void logWarn(Object... values) {
+		logWarnT("Default", values);
+	}
+
+	public static void logWarnT(String tag, Object... values) {
+		dispatch(Level.WARN, tag, values);
+	}
+
+	// [新增] INFO 级别 (流式日志，区别于 Monitor 的 info)
+	public static void logInfo(Object... values) {
+		logInfoT("Default", values);
+	}
+
+	public static void logInfoT(String tag, Object... values) {
+		dispatch(Level.INFO, tag, values);
+	}
+
+	// Monitor 专用接口 (保持不变)
+	public static void info(Object... values) {
+		infoT("Default", values);
+	}
+
+	public static void infoT(String tag, Object... values) {
+		if (banTag(tag)) return;
+
+		String msg = String.format("[%s] %s", tag, formatString(values));
+
+		logInfos.add(msg);
+	}
+
+	public static boolean banTag(String tag) {
+		if (singleMode) {
+			return !singleTag.equals(tag);
+		}
+
+		// [修改] 黑名单模式逻辑
+		if (isBlackListMode) {
+			// 如果在黑名单中，则拦截 (return true)
+			// 否则放行 (return false)
+			return blackList.contains(tag);
+		}
+
+		// 白名单模式逻辑 (原有)
+		for (String tagInfo : showTags) {
+			String[] splits = tagInfo.split(" ");
+			if (splits.length < 2) continue;
+
+			String key = splits[0];
+			String show = splits[1];
+			if (key.equals(tag))
+				return !passStr.equals(show);
+		}
+
+		return true; // 白名单模式下，未找到则默认拦截
+	}
+
+	/**
+	 * 格式化当前时间（Java 8+ 推荐）
+	 *
+	 * @param pattern 时间格式，如 "HH:mm:ss:SSS"
+	 * @return 格式化后的时间字符串
+	 */
+	public static String formatTime(String pattern) {
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
+		return LocalTime.now().format(formatter);
+	}
+
+	public static String formatString(Object... values) {
+		String msg;
+		if (values.length == 1) {
+			msg = String.valueOf(values[0]);
+		} else {
+			try {
+				String format = String.valueOf(values[0]);
+				Object[] args = Arrays.copyOfRange(values, 1, values.length);
+				msg = String.format(format, args);
+			} catch (Exception e) {
+				msg = values[0] + " <FmtErr> " + Arrays.toString(Arrays.copyOfRange(values, 1, values.length));
+			}
+		}
+		return msg;
+	}
+
+	public static void setIntros(String text) {
+		// [修改] 增加判空，防止在 initUI 之前调用导致的崩溃
+		if (getInstance().console != null) {
+			getInstance().console.setIntros(text);
+		}
+	}
+
+	/**
+	 * 获取 DLog 内部的 Stage (用于 UI 遮挡检测等).
+	 * @return DLog 的 Stage，未初始化时返回 null
+	 */
+	public Stage getStage() {
+		return stage;
+	}
+
+	/**
+	 * [新增] 显式 UI 初始化方法
+	 * 必须在 VisUIHelper.loadWithChineseFont() 之后调用
+	 */
+	public void initUI() {
+		if (stage != null) return; // 防止重复初始化
+
+		// [修改] 初始默认横屏
+		stage = new Stage(new ExtendViewport(LOGICAL_LONG * scl, LOGICAL_SHORT * scl));
+
+		console = new DebugConsole();
+		stage.addActor(console);
+
+		registerInput();
+
+		// 打印一条调试信息验证顺序
+//		log("DebugUI UI Initialized.");
+	}
+
+	private void registerInput() {
+		Gdx.app.postRunnable(() -> {
+			try {
+				ScreenManager sm = ScreenManager.getInstance();
+				if (sm != null && sm.getImp() != null) {
+					sm.getImp().addProcessor(0, stage);
+//					log("DebugUI Input Registered at Top.");
+				} else {
+//					log("Warning: ScreenManager not ready for DebugUI input.");
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		});
+	}
+
+	public void render() {
+		// [修改] 如果 UI 还没初始化，直接跳过渲染，但数据收集依然正常工作
+		if (!showDebugUI || stage == null) return;
+
+		stage.getViewport().apply(true);
+		stage.act();
+		stage.draw();
+	}
+
+	public void resize(int w, int h) {
+		if (stage == null) return;
+
+		scl = PlatformImpl.isAndroidUser() ? 1.4f : 2f;
+		ExtendViewport vp = (ExtendViewport) stage.getViewport();
+		if (h > w) {
+			vp.setMinWorldWidth(LOGICAL_SHORT * scl);
+			vp.setMinWorldHeight(LOGICAL_LONG * scl);
+		} else {
+			vp.setMinWorldWidth(LOGICAL_LONG * scl);
+			vp.setMinWorldHeight(LOGICAL_SHORT * scl);
+		}
+		vp.update(w, h, true);
+	}
+
+	public void dispose() {
+		if (stage != null) stage.dispose();
+		if (console != null) console.dispose();
+	}
+}

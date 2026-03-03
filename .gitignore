@@ -1,0 +1,45 @@
+## Gradle
+.gradle/
+gradle-app.setting
+/gradle/gradle-daemon-jvm.properties
+
+## Build Outputs
+build/
+bin/
+
+## IDE - IntelliJ / Android Studio
+.idea/
+*.ipr
+*.iws
+*.iml
+
+## IDE - Eclipse
+.classpath
+.project
+.metadata/
+.settings/
+.loadpath
+.externalToolBuilders/
+*.launch
+
+## Java
+*.class
+*.war
+*.ear
+hs_err_pid*
+.attach_pid*
+
+## OS & Temp
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+
+## Custom (项目自定义忽略)
+/.shikeik/
+/.lwjgl/
+/.temp/
+/outputs/
+/logs.txt
+/Project*.txt

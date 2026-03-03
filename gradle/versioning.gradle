@@ -1,0 +1,82 @@
+
+// 版本管理脚本
+// 用于自动管理项目版本号，解决手动修改多个文件的痛点
+
+def versionPropsFile = file('gradle.properties')
+def androidBuildFile = file('android/build.gradle')
+
+// 读取当前版本
+def getCurrentVersion = {
+    def props = new Properties()
+    versionPropsFile.withInputStream { props.load(it) }
+    return props.getProperty('projectVersion')
+}
+
+// 更新版本号的核心逻辑
+def updateVersion = { type ->
+    def props = new Properties()
+    versionPropsFile.withInputStream { props.load(it) }
+    
+    def currentVersion = props.getProperty('projectVersion')
+    def (major, minor, patch) = currentVersion.tokenize('.').collect { it.toInteger() }
+    
+    if (type == 'major') {
+        major++
+        minor = 0
+        patch = 0
+    } else if (type == 'minor') {
+        minor++
+        patch = 0
+    } else if (type == 'patch') {
+        patch++
+    }
+    
+    def newVersion = "$major.$minor.$patch"
+    
+    // 1. 更新 gradle.properties
+    def propsContent = versionPropsFile.getText('UTF-8')
+    propsContent = propsContent.replaceAll(/projectVersion\s*=\s*.*/, "projectVersion=${newVersion}")
+    versionPropsFile.write(propsContent, 'UTF-8')
+    
+    // 2. 更新 android/build.gradle (解决 AIDE+ 硬编码问题)
+    if (androidBuildFile.exists()) {
+        def androidContent = androidBuildFile.getText('UTF-8')
+        // 替换 versionName "x.y.z"
+        androidContent = androidContent.replaceAll(/versionName\s+"[^"]*"/, "versionName \"${newVersion}\"")
+        // 自动增加 versionCode
+        androidContent = androidContent.replaceAll(/versionCode\s+(\d+)/) { match, code ->
+            "versionCode ${code.toInteger() + 1}"
+        }
+        androidBuildFile.write(androidContent, 'UTF-8')
+    }
+    
+    println "🎉 版本号已升级: $currentVersion -> $newVersion"
+    println "✅ gradle.properties 已更新"
+    if (androidBuildFile.exists()) println "✅ android/build.gradle 已更新 (versionName & versionCode)"
+}
+
+tasks.register('bumpPatch') {
+    group = 'versioning'
+    description = '升级修订号 (Bug修复): 0.8.11 -> 0.8.12'
+    doLast { updateVersion('patch') }
+}
+
+tasks.register('bumpMinor') {
+    group = 'versioning'
+    description = '升级次版本号 (新功能): 0.8.11 -> 0.9.0'
+    doLast { updateVersion('minor') }
+}
+
+tasks.register('bumpMajor') {
+    group = 'versioning'
+    description = '升级主版本号 (重大更新): 0.8.11 -> 1.0.0'
+    doLast { updateVersion('major') }
+}
+
+tasks.register('printVersion') {
+    group = 'versioning'
+    description = '打印当前版本号'
+    doLast {
+        println "Current Version: ${getCurrentVersion()}"
+    }
+}

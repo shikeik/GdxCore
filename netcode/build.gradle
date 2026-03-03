@@ -1,0 +1,10 @@
+// GDEngine - netcode 模块
+// 包含网络联机框架: NetworkManager, Transport, RPC, Supabase 等
+
+dependencies {
+    api project(':core')
+
+    // WebSocket (Supabase Realtime)
+    api 'org.java-websocket:Java-WebSocket:1.5.7'
+    api 'org.slf4j:slf4j-nop:2.0.13'
+}
