@@ -60,11 +60,14 @@ public class LogPanel extends VisTable {
 	private VisTable tagPanel;
 	private boolean tagPanelVisible = false;
 
-	// ---- 命令输入 (Phase 2 占位) ----
-	private VisTable commandRow;
+	// ---- 命令输入 ----
+	private VisTextField commandField;
+	private final List<String> commandHistory = new ArrayList<>();
+	private int historyIndex = -1;
 
 	public LogPanel() {
 		buildUI();
+		registerBuiltinCommands();
 	}
 
 	// ============================================================
@@ -269,13 +272,153 @@ public class LogPanel extends VisTable {
 		add(logScroll).grow().pad(2).row();
 	}
 
-	// ---------- 命令行 (Phase 2 占位) ----------
+	// ---------- 命令输入栏 ----------
 
 	private void buildCommandRow() {
-		commandRow = new VisTable();
-		// Phase 2 时这里会放 VisTextField + 发送按钮
-		// 当前版本为空，不增加高度
-		add(commandRow).growX().height(0).row();
+		VisTable row = new VisTable();
+
+		VisLabel prompt = new VisLabel(">", "small");
+		commandField = new VisTextField("");
+		commandField.setMessageText("输入命令 (help 查看帮助) ...");
+
+		// 回车执行命令
+		commandField.addListener(new com.badlogic.gdx.scenes.scene2d.InputListener() {
+			@Override
+			public boolean keyDown(InputEvent event, int keycode) {
+				if (keycode == com.badlogic.gdx.Input.Keys.ENTER) {
+					executeCommandInput();
+					return true;
+				}
+				// 上箭头: 历史记录上翻
+				if (keycode == com.badlogic.gdx.Input.Keys.UP) {
+					navigateHistory(-1);
+					return true;
+				}
+				// 下箭头: 历史记录下翻
+				if (keycode == com.badlogic.gdx.Input.Keys.DOWN) {
+					navigateHistory(1);
+					return true;
+				}
+				return false;
+			}
+		});
+
+		VisTextButton sendBtn = new VisTextButton("Send");
+		sendBtn.addListener(new ClickListener() {
+			@Override
+			public void clicked(InputEvent event, float x, float y) {
+				executeCommandInput();
+			}
+		});
+
+		row.add(prompt).padLeft(4).padRight(4);
+		row.add(commandField).growX().height(28);
+		row.add(sendBtn).padLeft(4).padRight(4).minWidth(50);
+
+		add(row).growX().pad(2).row();
+	}
+
+	/** 执行命令输入栏中的文本 */
+	private void executeCommandInput() {
+		String input = commandField.getText().trim();
+		if (input.isEmpty()) return;
+
+		// 记入历史
+		commandHistory.add(input);
+		historyIndex = commandHistory.size(); // 指向末尾之后
+
+		// 执行
+		String result = CommandRegistry.execute(input);
+
+		// 将命令和结果输出到日志
+		DLog.logInfoT("Console", "> " + input);
+		if (result != null && !result.isEmpty()) {
+			DLog.logInfoT("Console", result);
+		}
+
+		commandField.setText("");
+		filterDirty = true;
+	}
+
+	/** 浏览历史命令 (direction: -1上翻, +1下翻) */
+	private void navigateHistory(int direction) {
+		if (commandHistory.isEmpty()) return;
+		historyIndex += direction;
+		if (historyIndex < 0) historyIndex = 0;
+		if (historyIndex >= commandHistory.size()) {
+			historyIndex = commandHistory.size();
+			commandField.setText("");
+			return;
+		}
+		commandField.setText(commandHistory.get(historyIndex));
+		commandField.setCursorPosition(commandField.getText().length());
+	}
+
+	// ---------- 内置命令注册 ----------
+
+	private void registerBuiltinCommands() {
+		CommandRegistry.register("help", "列出所有已注册命令", args -> CommandRegistry.getHelp());
+
+		CommandRegistry.register("clear", "清空日志", args -> {
+			DLog.clearAllLogs();
+			if (logLabel != null) logLabel.setText("");
+			filterDirty = true;
+			return "日志已清空";
+		});
+
+		CommandRegistry.register("filter", "Tag 过滤 (filter +Tag1 -Tag2 / filter all)", args -> {
+			if (args.trim().equalsIgnoreCase("all")) {
+				showAllTags = true;
+				tagFilter.clear();
+				updateTagToggleBtnText();
+				filterDirty = true;
+				return "已重置为显示全部 Tag";
+			}
+			String[] parts = args.trim().split("\\s+");
+			for (String part : parts) {
+				if (part.startsWith("+") && part.length() > 1) {
+					showAllTags = false;
+					tagFilter.add(part.substring(1));
+				} else if (part.startsWith("-") && part.length() > 1) {
+					tagFilter.remove(part.substring(1));
+					if (tagFilter.isEmpty()) showAllTags = true;
+				}
+			}
+			updateTagToggleBtnText();
+			filterDirty = true;
+			return "当前 Tag 过滤: " + (showAllTags ? "All" : tagFilter.toString());
+		});
+
+		CommandRegistry.register("level", "设置显示等级 (level warn error / level all)", args -> {
+			if (args.trim().equalsIgnoreCase("all")) {
+				levelFilters.clear();
+				levelFilters.addAll(EnumSet.allOf(DLog.Level.class));
+				filterDirty = true;
+				return "已显示全部等级";
+			}
+			levelFilters.clear();
+			String[] parts = args.trim().split("\\s+");
+			for (String part : parts) {
+				try {
+					levelFilters.add(DLog.Level.valueOf(part.toUpperCase()));
+				} catch (IllegalArgumentException ignored) {
+					// 忽略非法等级名
+				}
+			}
+			if (levelFilters.isEmpty()) {
+				levelFilters.addAll(EnumSet.allOf(DLog.Level.class));
+				return "无有效等级名, 已重置为全部";
+			}
+			filterDirty = true;
+			return "当前等级过滤: " + levelFilters.toString();
+		});
+
+		CommandRegistry.register("search", "设置搜索关键词 (search 关键词 / search)", args -> {
+			setSearchTerm(args.trim());
+			return args.trim().isEmpty()
+				? "已清除搜索"
+				: "搜索: " + args.trim();
+		});
 	}
 
 	// ============================================================
