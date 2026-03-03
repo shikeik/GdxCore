@@ -20,7 +20,7 @@ public class ServerConfig {
 
     // ── 网络 ──
     /** 服务器监听端口 */
-    public int port = 7777;
+    public int port = 20001;
     /** 最大玩家数 */
     public int maxPlayers = 8;
     /** 客户端心跳超时（秒） */
@@ -118,7 +118,7 @@ public class ServerConfig {
         System.out.println("用法: java -jar server.jar [选项]");
         System.out.println();
         System.out.println("选项:");
-        System.out.println("  --port <端口>        服务器监听端口 (默认: 7777)");
+        System.out.println("  --port <端口>        服务器监听端口 (默认: 20001)");
         System.out.println("  --tickrate <频率>    服务器 tick 频率 Hz (默认: 60)");
         System.out.println("  --max-players <数量> 最大玩家数 (默认: 8)");
         System.out.println("  --timeout <秒>       客户端心跳超时 (默认: 10)");

@@ -6,6 +6,8 @@ import java.util.Scanner;
 import java.util.function.Consumer;
 
 import com.goldsprite.gdengine.log.DLog;
+import com.goldsprite.gdengine.chat.ChatChannel;
+import com.goldsprite.gdengine.chat.ChatMessage;
 
 /**
  * 服务器命令行控制台（守护线程）。
@@ -36,6 +38,20 @@ public class ServerConsole extends Thread {
 
         // 注册内置命令
         registerBuiltinCommands();
+
+        // 将 ServerConsole 的命令表桥接到 ChatChannel（让 /say 等走 ChatChannel）
+        ChatChannel.get().setCommandExecutor(cmdLine -> {
+            String[] parts = cmdLine.split("\\s+", 2);
+            String cmd = parts[0].toLowerCase();
+            String args = parts.length > 1 ? parts[1] : "";
+            CommandEntry entry = commands.get(cmd);
+            if (entry != null) {
+                // 用 StringBuilder 捕获命令输出（命令原来直接 println）
+                entry.handler.accept(args);
+                return null; // 内置命令自行 println，不需要 ChatChannel 额外输出
+            }
+            return "未知命令: " + cmd + "。输入 'help' 查看可用命令。";
+        });
     }
 
     /**
@@ -61,7 +77,13 @@ public class ServerConsole extends Thread {
                 String line = scanner.nextLine().trim();
                 if (line.isEmpty()) continue;
 
-                // 分离命令名和参数
+                // ── MC 风格路由: / 前缀走 ChatChannel（支持 /say 聊天） ──
+                if (line.startsWith("/")) {
+                    ChatChannel.get().processInput(line, "Server");
+                    continue;
+                }
+
+                // ── 普通命令（不带 / 前缀）: 直接走 ServerConsole 命令表 ──
                 String[] parts = line.split("\\s+", 2);
                 String cmd = parts[0].toLowerCase();
                 String argsStr = parts.length > 1 ? parts[1] : "";
@@ -96,7 +118,19 @@ public class ServerConsole extends Thread {
             for (Map.Entry<String, CommandEntry> e : commands.entrySet()) {
                 System.out.printf("  %-12s %s%n", e.getKey(), e.getValue().description);
             }
+            System.out.println("  ── 支持 / 前缀 ──");
+            System.out.println("  /say <msg>   向所有玩家发送聊天消息");
+            System.out.println("  /命令名       等同于不带 / 的命令");
             System.out.println("════════════════════════");
+        });
+
+        registerCommand("say", "向所有玩家发送聊天消息 (用法: say <消息>)", args -> {
+            if (args.isEmpty()) {
+                System.out.println("  用法: say <消息> 或 /say <消息>");
+                return;
+            }
+            ChatMessage msg = ChatMessage.chat("Server", args);
+            ChatChannel.get().postMessage(msg);
         });
 
         registerCommand("status", "显示服务器状态（玩家数、内存、运行时长）", args -> {

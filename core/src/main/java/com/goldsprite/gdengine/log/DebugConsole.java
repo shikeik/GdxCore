@@ -33,6 +33,7 @@ public class DebugConsole extends Group {
 	private VisTextButton fpsBtn;
 	private VisTable panel; // 滑动面板
 	private LogPanel logPanel;  // [Phase3] LOG 标签页使用 LogPanel
+	private GameChatPanel chatPanel; // [Phase4] CHAT 标签页
 	private VisLabel infoLabel, introLabel;
 	private ScrollPane infoScroll, introScroll;
 	private Container<Actor> contentContainer;
@@ -102,6 +103,7 @@ public class DebugConsole extends Group {
 		Table header = new Table();
 		VisTextButton btnIntro = createTabBtn("INTRO", () -> showTab(introScroll));
 		VisTextButton btnLog = createTabBtn("LOG", () -> showTab(logPanel));
+		VisTextButton btnChat = createTabBtn("CHAT", () -> showTab(chatPanel));
 		VisTextButton btnInfo = createTabBtn("INFO", () -> showTab(infoScroll));
 
 		// [Phase3] AutoScroll / Clear 已内置于 LogPanel，此处仅保留标签页按钮 + 关闭按钮
@@ -117,6 +119,7 @@ public class DebugConsole extends Group {
 
 		header.add(btnIntro).width(80).padRight(5);
 		header.add(btnLog).width(80).padRight(5);
+		header.add(btnChat).width(80).padRight(5);
 		header.add(btnInfo).width(80).padRight(5);
 		header.add().expandX();
 		header.add(btnClose).width(50);
@@ -126,6 +129,7 @@ public class DebugConsole extends Group {
 		introLabel = new VisLabel("", "small"); introLabel.setWrap(true);
 		introScroll = new HoverFocusScrollPane(introLabel);
 		logPanel = new LogPanel();  // [Phase3] 替换旧的 logLabel + logScroll
+		chatPanel = new GameChatPanel(); // [Phase4] 游戏聊天面板
 		infoLabel = new VisLabel("", "small");
 		infoScroll = new HoverFocusScrollPane(infoLabel);
 
