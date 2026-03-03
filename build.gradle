@@ -1,5 +1,6 @@
 // GdxCore 根构建脚本
-// 多模块项目: core + netcode
+// 纯底层引擎核心框架（日志、屏幕管理、UI 组件、资源工具等）
+// 不包含任何网络或业务逻辑
 
 buildscript {
     repositories {
@@ -56,8 +57,8 @@ subprojects {
             mavenJava(MavenPublication) {
                 from components.java
                 groupId = "${rootProject.properties.jitpackGroup}"
-                artifactId = project.name  // 'core' 或 'netcode'
-                version = "${rootProject.properties.projectVersion}"
+                artifactId = project.name
+                version = project.version
             }
         }
     }
