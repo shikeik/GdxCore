@@ -1,15 +1,14 @@
-feat: Phase2 - 新增CommandRegistry命令系统, LogPanel命令输入栏
+feat: Phase3 - DebugConsole集成LogPanel, LOG标签页全面升级
 
-LogPanel统一日志控制台 - 第2阶段(命令系统):
-- 新增 CommandRegistry 运行时命令注册表
-  - register / execute / getSuggestions / getHelp / hasCommand / unregister
-  - 执行异常自动捕获, 命令名大小写不敏感
-- LogPanel 命令输入栏: 回车/Send执行, 上下箭头浏览历史
-- 内置命令: help / clear / filter / level / search
-  - filter +Tag1 -Tag2 / filter all 动态切换Tag过滤
-  - level warn error / level all 切换等级显示
-- 新增 CommandRegistryTest: 13个测试 (注册/执行/补全/help/异常/大小写)
-- 全部 39 个测试通过
+LogPanel统一日志控制台 - 第3阶段(DebugConsole集成):
+- DebugConsole LOG标签页: logLabel+logScroll → LogPanel实例
+- 移除 header 中的 AutoScroll / Clear 按钮 (已内置于 LogPanel)
+- contentContainer 类型: Container<ScrollPane> → Container<Actor>
+- showTab() 参数: ScrollPane → Actor
+- refreshData() 移除旧 logLabel 手动更新逻辑 (LogPanel.act() 自管理)
+- 保留全部特色: 抽屉动画 / FPS按钮 / INTRO+INFO标签 / 拖拽调整大小
+- DebugConsole 代码从 326 行精简至 287 行
+- 全部 39 个测试通过, 无回归
 - 新增GDEngineConfig解耦接口(替代项目层BuildConfig直接引用)
 - 新增SelectionNavigator接口(替代项目层InputManager直接引用)
 - ThreadedDownload.download()参数化(移除硬编码URL)

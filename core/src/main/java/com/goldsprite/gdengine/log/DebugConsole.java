@@ -7,6 +7,7 @@ import com.badlogic.gdx.scenes.scene2d.Group;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
+import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.ui.Container;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
@@ -31,9 +32,10 @@ public class DebugConsole extends Group {
 	// UI 组件
 	private VisTextButton fpsBtn;
 	private VisTable panel; // 滑动面板
-	private VisLabel logLabel, infoLabel, introLabel;
-	private ScrollPane logScroll, infoScroll, introScroll;
-	private Container<ScrollPane> contentContainer;
+	private LogPanel logPanel;  // [Phase3] LOG 标签页使用 LogPanel
+	private VisLabel infoLabel, introLabel;
+	private ScrollPane infoScroll, introScroll;
+	private Container<Actor> contentContainer;
 
 	// 布局配置
 	private final float SAFE_PAD = 30f; // 安全边距
@@ -50,7 +52,6 @@ public class DebugConsole extends Group {
 	private final float REFRESH_RATE = 1/60f; // UI 刷新频率
 
 	// 控制状态
-	private boolean autoScroll = true; // 默认开启自动滚动
 
 	float resizeHandleHeight = 14;
 
@@ -100,35 +101,10 @@ public class DebugConsole extends Group {
 		// --- 顶部栏 ---
 		Table header = new Table();
 		VisTextButton btnIntro = createTabBtn("INTRO", () -> showTab(introScroll));
-		VisTextButton btnLog = createTabBtn("LOG", () -> showTab(logScroll));
+		VisTextButton btnLog = createTabBtn("LOG", () -> showTab(logPanel));
 		VisTextButton btnInfo = createTabBtn("INFO", () -> showTab(infoScroll));
 
-		// Auto Scroll Button
-		VisTextButton btnAutoScroll = new VisTextButton("AutoScroll: ON");
-		btnAutoScroll.setColor(Color.GREEN);
-		btnAutoScroll.addListener(new ClickListener() {
-			@Override
-			public void clicked(InputEvent event, float x, float y) {
-				autoScroll = !autoScroll;
-				if (autoScroll) {
-					btnAutoScroll.setText("AutoScroll: ON");
-					btnAutoScroll.setColor(Color.GREEN);
-				} else {
-					btnAutoScroll.setText("AutoScroll: OFF");
-					btnAutoScroll.setColor(Color.GRAY);
-				}
-			}
-		});
-
-		// Clear Button
-		VisTextButton btnClear = new VisTextButton("Clear");
-		btnClear.addListener(new ClickListener() {
-			@Override
-			public void clicked(InputEvent event, float x, float y) {
-				DLog.clearAllLogs();
-				logLabel.setText(""); // 立即清空文本
-			}
-		});
+		// [Phase3] AutoScroll / Clear 已内置于 LogPanel，此处仅保留标签页按钮 + 关闭按钮
 
 		VisTextButton btnClose = new VisTextButton(" X ");
 		btnClose.setColor(Color.RED);
@@ -143,17 +119,13 @@ public class DebugConsole extends Group {
 		header.add(btnLog).width(80).padRight(5);
 		header.add(btnInfo).width(80).padRight(5);
 		header.add().expandX();
-		header.add(btnAutoScroll).padRight(10);
-		header.add(btnClear).padRight(10);
 		header.add(btnClose).width(50);
 		panel.add(header).growX().height(40).pad(5).row();
 
 		// --- 内容区 ---
 		introLabel = new VisLabel("", "small"); introLabel.setWrap(true);
 		introScroll = new HoverFocusScrollPane(introLabel);
-		logLabel = new VisLabel("", "small"); logLabel.setWrap(true);
-		logLabel.setFontScale(0.75f); // 缩小一些以便信息量密集化
-		logScroll = new HoverFocusScrollPane(logLabel);
+		logPanel = new LogPanel();  // [Phase3] 替换旧的 logLabel + logScroll
 		infoLabel = new VisLabel("", "small");
 		infoScroll = new HoverFocusScrollPane(infoLabel);
 
@@ -206,11 +178,9 @@ public class DebugConsole extends Group {
 		return btn;
 	}
 
-	private void showTab(ScrollPane target) {
+	private void showTab(Actor target) {
 		contentContainer.setActor(target);
-		if (target == logScroll) {
-			target.layout(); target.setScrollY(target.getMaxY());
-		}
+		// LogPanel 自行管理滚动，无需手动设置
 	}
 
 	public static void autoSwitchState() {
@@ -291,17 +261,8 @@ public class DebugConsole extends Group {
 
 		// 只有面板在屏幕内时才更新文本 (优化)
 		if (currentPanelY < getStage().getHeight()) {
-			if (contentContainer.getActor() == logScroll) {
-				logLabel.setText(String.join("\n", DLog.getLogs()));
-
-				if (autoScroll) {
-					// 只有在自动滚动开启时才执行
-					// 增加一个小的容差或强制到底
-					logScroll.layout();
-					logScroll.setScrollY(logScroll.getMaxY());
-					logScroll.setVelocityY(0);
-				}
-			} else if (contentContainer.getActor() == infoScroll) {
+			// [Phase3] LogPanel 由 act() 自行刷新, 无需手动更新
+			if (contentContainer.getActor() == infoScroll) {
 				infoLabel.setText(DLog.getInfoString());
 			}
 		}
