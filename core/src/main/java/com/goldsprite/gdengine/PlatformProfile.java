@@ -80,8 +80,18 @@ public class PlatformProfile {
     /** 触摸目标最小尺寸（dp） */
     public float minTouchTarget = 32f;
 
-    /** UI 安全区域边距 (适配异形屏/圆角屏) */
-    public float safeAreaMargin = 8f;
+    // ══════════════ UI 安全区域配置 (适配异形屏/圆角/手势条) ══════════════
+    /** 废弃: 原单一安全边距 */
+    @Deprecated public float safeAreaMargin = 8f;
+
+    /** 左侧安全边距 (横屏挖孔/圆角) */
+    public float safeInsetLeft = 0f;
+    /** 右侧安全边距 (横屏挖孔/圆角) */
+    public float safeInsetRight = 0f;
+    /** 顶部安全边距 (状态栏) */
+    public float safeInsetTop = 0f;
+    /** 底部安全边距 (手势条) */
+    public float safeInsetBottom = 0f;
 
     // ══════════════ 工厂方法 ══════════════
 
@@ -96,9 +106,15 @@ public class PlatformProfile {
             p.ideConsoleViewportScale = 1.4f;
             p.splitBarThickness = 15f;
             p.minTouchTarget = 48f;
-            p.safeAreaMargin = 32f; // Android 端预设较大边距适配异形屏
+            
+            // Android 端预设安全边距
+            p.safeAreaMargin = 32f; 
+            p.safeInsetLeft = 48f;
+            p.safeInsetRight = 48f;
+            p.safeInsetTop = 12f;
+            p.safeInsetBottom = 12f;
         }
-        // 桌面端保持字段默认值
+        // 桌面端保持字段默认值 (0)
         return p;
     }
 }
