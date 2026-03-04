@@ -85,13 +85,13 @@ public class PlatformProfile {
     @Deprecated public float safeAreaMargin = 8f;
 
     /** 左侧安全边距 (横屏挖孔/圆角) */
-    public float safeInsetLeft = 0f;
+    public float safeInsetLeft = 24f; // 默认所有平台至少保留一定边距
     /** 右侧安全边距 (横屏挖孔/圆角) */
-    public float safeInsetRight = 0f;
+    public float safeInsetRight = 24f;
     /** 顶部安全边距 (状态栏) */
-    public float safeInsetTop = 0f;
+    public float safeInsetTop = 12f;
     /** 底部安全边距 (手势条) */
-    public float safeInsetBottom = 0f;
+    public float safeInsetBottom = 12f;
 
     // ══════════════ 工厂方法 ══════════════
 
@@ -107,14 +107,19 @@ public class PlatformProfile {
             p.splitBarThickness = 15f;
             p.minTouchTarget = 48f;
             
-            // Android 端预设安全边距
+            // Android 端预设安全边距 (针对横屏挖孔和虚拟键)
             p.safeAreaMargin = 32f; 
             p.safeInsetLeft = 48f;
             p.safeInsetRight = 48f;
-            p.safeInsetTop = 12f;
-            p.safeInsetBottom = 12f;
+            p.safeInsetTop = 16f;
+            p.safeInsetBottom = 16f;
+        } else {
+            // PC 端默认边距 (避免贴边)
+            p.safeInsetLeft = 20f;
+            p.safeInsetRight = 20f;
+            p.safeInsetTop = 10f;
+            p.safeInsetBottom = 10f;
         }
-        // 桌面端保持字段默认值 (0)
         return p;
     }
 }
