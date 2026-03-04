@@ -1,6 +1,11 @@
 // GdxCore 根构建脚本
 // 纯底层引擎核心框架（日志、屏幕管理、UI 组件、资源工具等）
 // 不包含任何网络或业务逻辑
+//
+// 多模块架构:
+//   com.github.shikeik:GdxCore           — 伞形 POM，传递依赖所有子模块
+//   com.github.shikeik.GdxCore:core      — 引擎核心（日志、屏幕、UI、资源工具等）
+//   com.github.shikeik.GdxCore:input     — 通用输入组件（SmartInput 系列）
 
 // JitPack 环境下跳过 GdxGradle 插件（仅工具任务，publishToMavenLocal 不需要）
 def isJitPack = System.getenv("JITPACK") == "true"
@@ -29,12 +34,42 @@ if (!isJitPack) {
     }
 }
 
+// === 根项目: 伞形 POM 发布 ===
+// 用户只需 api 'com.github.shikeik:GdxCore:版本' 即可获取所有子模块
+apply plugin: 'maven-publish'
+
+publishing {
+    publications {
+        umbrella(MavenPublication) {
+            groupId = 'com.github.shikeik'
+            artifactId = rootProject.name   // 'GdxCore'
+            version = "${rootProject.properties.projectVersion}"
+
+            // 纯 POM 发布（无 JAR），声明对所有子模块的传递依赖
+            pom {
+                packaging = 'pom'
+                withXml {
+                    def depsNode = asNode().appendNode('dependencies')
+                    rootProject.subprojects.each { sub ->
+                        def dep = depsNode.appendNode('dependency')
+                        dep.appendNode('groupId', "${rootProject.properties.jitpackGroup}")
+                        dep.appendNode('artifactId', sub.name)
+                        dep.appendNode('version', "${rootProject.properties.projectVersion}")
+                        dep.appendNode('scope', 'compile')
+                    }
+                }
+            }
+        }
+    }
+}
+
+// === 子项目通用配置 ===
 subprojects {
     apply plugin: 'java-library'
     apply plugin: 'maven-publish'
 
-    group = "${rootProject.properties.jitpackGroup}"
-    version = "${rootProject.properties.projectVersion}"
+    group = "${rootProject.properties.jitpackGroup}"       // com.github.shikeik.GdxCore
+    version = "${rootProject.properties.projectVersion}"   // 1.1.0
 
     java {
         toolchain {
@@ -62,10 +97,11 @@ subprojects {
         publications {
             mavenJava(MavenPublication) {
                 from components.java
-                // JitPack 单子模块项目会合并到根级: com.github.shikeik:GdxCore
-                groupId = 'com.github.shikeik'
-                artifactId = rootProject.name   // 'GdxCore'
-                version = project.version
+                // 多模块: 每个子模块独立发布
+                // com.github.shikeik.GdxCore:core / com.github.shikeik.GdxCore:input
+                groupId = project.group as String
+                artifactId = project.name
+                version = project.version as String
             }
         }
     }

@@ -1,0 +1,7 @@
+// GDEngine - input 模块
+// 包含通用输入组件: SmartInput 系列（文本、数值、颜色、选择、布尔等）
+// 依赖 core 模块（使用 ToastUI、SimpleNumPad、ColorTextureUtils 等）
+
+dependencies {
+    api project(':core')
+}
