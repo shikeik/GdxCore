@@ -2,6 +2,9 @@
 // 纯底层引擎核心框架（日志、屏幕管理、UI 组件、资源工具等）
 // 不包含任何网络或业务逻辑
 
+// JitPack 环境下跳过 GdxGradle 插件（仅工具任务，publishToMavenLocal 不需要）
+def isJitPack = System.getenv("JITPACK") == "true"
+
 buildscript {
     repositories {
         google()
@@ -13,14 +16,17 @@ buildscript {
         maven { url "https://jitpack.io" }
     }
     dependencies {
-        classpath 'com.github.shikeik:GdxGradle:0.9.0'
+        if (System.getenv("JITPACK") != "true") {
+            classpath 'com.github.shikeik:GdxGradle:0.9.0'
+        }
     }
 }
 
-apply plugin: 'com.goldsprite.gdx-tasks'
-
-gdxTasks {
-    taskGroup = 'gdxcore'
+if (!isJitPack) {
+    apply plugin: 'com.goldsprite.gdx-tasks'
+    gdxTasks {
+        taskGroup = 'gdxcore'
+    }
 }
 
 subprojects {
