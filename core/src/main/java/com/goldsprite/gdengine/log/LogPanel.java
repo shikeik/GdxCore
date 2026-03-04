@@ -72,8 +72,6 @@ public class LogPanel extends VisTable {
 	private ConsoleTextField consoleInput;
 
 	public LogPanel() {
-		// DEBUG: 验证是否使用了本地最新代码
-		DLog.log("System", "LogPanel initialized (Local Source v2 - PopupMenu)");
 		buildUI();
 		registerBuiltinCommands();
 	}

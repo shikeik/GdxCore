@@ -78,7 +78,7 @@ public class VisUIHelper {
 			// 添加 TenPatch 支持 (如果项目中使用了 com.ray3k.tenpatch)
 			try {
 				// 尝试通过反射注册，避免编译错误如果依赖尚未刷新
-				Class<?> tenPatchClass = Class.forName("TenPatchDrawable");
+				Class<?> tenPatchClass = Class.forName("com.ray3k.tenpatch.TenPatchDrawable");
 				// Skin 不需要显式注册类，只要 JSON 里写了全限定名且 Classpath 里有即可
 				DLog.log("检测到 TenPatch 库，支持动态切片皮肤。");
 			} catch (ClassNotFoundException e) {
@@ -271,7 +271,7 @@ public class VisUIHelper {
 		// [新增] 确保 window-bg 存在 (用于 DialogUI 和 VisUIDemoScreen)
 		// 优先复用现有的窗口背景
 		if (!skin.has("window-bg", Drawable.class)) {
-			DLog.log("Injecting window-bg fallback for skin.");
+//			DLog.log("Injecting window-bg fallback for skin.");
 			try {
 				if (skin.has("window", Drawable.class)) {
 					skin.add("window-bg", skin.getDrawable("window"));
