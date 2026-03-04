@@ -13,7 +13,10 @@ import com.badlogic.gdx.scenes.scene2d.ui.Cell;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.goldsprite.gdengine.PlatformProfile;
+import com.goldsprite.gdengine.ui.widget.ConsoleTextField;
 import com.goldsprite.gdengine.ui.widget.HoverFocusScrollPane;
+import com.goldsprite.gdengine.ui.widget.SelectableLabel;
+import com.goldsprite.gdengine.ui.widget.TextFieldPasteMenu;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
@@ -46,7 +49,7 @@ public class LogPanel extends VisTable {
 	private VisTextField searchField;
 	private final VisTextButton[] levelBtns = new VisTextButton[DLog.Level.values().length];
 	private VisTextButton tagToggleBtn;
-	private VisLabel logLabel;
+	private SelectableLabel logLabel;
 	private HoverFocusScrollPane logScroll;
 	private VisTextButton autoScrollBtn;
 	private boolean autoScroll = true;
@@ -62,9 +65,7 @@ public class LogPanel extends VisTable {
 	private boolean tagPanelVisible = false;
 
 	// ---- 命令输入 ----
-	private VisTextField commandField;
-	private final List<String> commandHistory = new ArrayList<>();
-	private int historyIndex = -1;
+	private ConsoleTextField consoleInput;
 
 	public LogPanel() {
 		buildUI();
@@ -95,6 +96,7 @@ public class LogPanel extends VisTable {
 		VisLabel icon = new VisLabel("Search:", "small");
 		searchField = new VisTextField("");
 		searchField.setMessageText("搜索 tag 或 message ...");
+		TextFieldPasteMenu.attach(searchField);
 		searchField.addListener(new ChangeListener() {
 			@Override
 			public void changed(ChangeEvent event, Actor actor) {
@@ -265,7 +267,7 @@ public class LogPanel extends VisTable {
 	// ---------- 日志区 ----------
 
 	private void buildLogArea() {
-		logLabel = new VisLabel("", "small");
+		logLabel = new SelectableLabel("", "small");
 		logLabel.setWrap(true);
 		logLabel.setFontScale(PlatformProfile.get().logPanelFontScale);
 		logScroll = new HoverFocusScrollPane(logLabel);
@@ -279,54 +281,19 @@ public class LogPanel extends VisTable {
 		VisTable row = new VisTable();
 
 		VisLabel prompt = new VisLabel(">", "small");
-		commandField = new VisTextField("");
-		commandField.setMessageText("输入命令 (help 查看帮助) ...");
-
-		// 回车执行命令
-		commandField.addListener(new com.badlogic.gdx.scenes.scene2d.InputListener() {
-			@Override
-			public boolean keyDown(InputEvent event, int keycode) {
-				if (keycode == com.badlogic.gdx.Input.Keys.ENTER) {
-					executeCommandInput();
-					return true;
-				}
-				// 上箭头: 历史记录上翻
-				if (keycode == com.badlogic.gdx.Input.Keys.UP) {
-					navigateHistory(-1);
-					return true;
-				}
-				// 下箭头: 历史记录下翻
-				if (keycode == com.badlogic.gdx.Input.Keys.DOWN) {
-					navigateHistory(1);
-					return true;
-				}
-				return false;
-			}
-		});
-
-		VisTextButton sendBtn = new VisTextButton("Send");
-		sendBtn.addListener(new ClickListener() {
-			@Override
-			public void clicked(InputEvent event, float x, float y) {
-				executeCommandInput();
-			}
-		});
+		consoleInput = new ConsoleTextField();
+		consoleInput.setMessageText("输入命令 (help 查看帮助) ...");
+		consoleInput.setOnSubmit(this::executeCommandInput);
 
 		row.add(prompt).padLeft(4).padRight(4);
-		row.add(commandField).growX().height(28);
-		row.add(sendBtn).padLeft(4).padRight(4).minWidth(50);
+		row.add(consoleInput).growX().height(28);
 
 		add(row).growX().pad(2).row();
 	}
 
-	/** 执行命令输入栏中的文本 */
-	private void executeCommandInput() {
-		String input = commandField.getText().trim();
-		if (input.isEmpty()) return;
-
-		// 记入历史
-		commandHistory.add(input);
-		historyIndex = commandHistory.size(); // 指向末尾之后
+	/** 执行命令输入（由 ConsoleTextField 回调触发） */
+	private void executeCommandInput(String input) {
+		if (input == null || input.isEmpty()) return;
 
 		// 执行
 		String result = CommandRegistry.execute(input);
@@ -337,22 +304,7 @@ public class LogPanel extends VisTable {
 			DLog.logInfoT("Console", result);
 		}
 
-		commandField.setText("");
 		filterDirty = true;
-	}
-
-	/** 浏览历史命令 (direction: -1上翻, +1下翻) */
-	private void navigateHistory(int direction) {
-		if (commandHistory.isEmpty()) return;
-		historyIndex += direction;
-		if (historyIndex < 0) historyIndex = 0;
-		if (historyIndex >= commandHistory.size()) {
-			historyIndex = commandHistory.size();
-			commandField.setText("");
-			return;
-		}
-		commandField.setText(commandHistory.get(historyIndex));
-		commandField.setCursorPosition(commandField.getText().length());
 	}
 
 	// ---------- 内置命令注册 ----------

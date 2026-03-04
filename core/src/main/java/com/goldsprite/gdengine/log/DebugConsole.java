@@ -17,7 +17,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.goldsprite.gdengine.assets.ColorTextureUtils;
 import com.goldsprite.gdengine.assets.VisUIHelper;
 import com.goldsprite.gdengine.ui.widget.HoverFocusScrollPane;
-import com.kotcrab.vis.ui.widget.VisLabel;
+import com.goldsprite.gdengine.ui.widget.SelectableLabel;
 import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 
@@ -33,7 +33,7 @@ public class DebugConsole extends Group {
 	private VisTextButton fpsBtn;
 	private VisTable panel; // 滑动面板
 	private LogPanel logPanel;  // [Phase3] LOG 标签页使用 LogPanel
-	private VisLabel infoLabel, introLabel;
+	private SelectableLabel infoLabel, introLabel;
 	private ScrollPane infoScroll, introScroll;
 	private Container<Actor> contentContainer;
 
@@ -123,10 +123,10 @@ public class DebugConsole extends Group {
 		panel.add(header).growX().height(40).pad(5).row();
 
 		// --- 内容区 ---
-		introLabel = new VisLabel("", "small"); introLabel.setWrap(true);
+		introLabel = new SelectableLabel("", "small"); introLabel.setWrap(true);
 		introScroll = new HoverFocusScrollPane(introLabel);
 		logPanel = new LogPanel();  // [Phase3] 替换旧的 logLabel + logScroll
-		infoLabel = new VisLabel("", "small");
+		infoLabel = new SelectableLabel("", "small");
 		infoScroll = new HoverFocusScrollPane(infoLabel);
 
 		contentContainer = new Container<>();
