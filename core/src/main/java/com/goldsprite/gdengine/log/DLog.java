@@ -216,18 +216,30 @@ public class DLog {
 		}
 	}
 
+	/**
+	 * 移除已注册的日志输出端
+	 */
+	public static void removeLogOutput(LogOutput output) {
+		if (output != null) {
+			outputs.remove(output);
+		}
+	}
+
+	/**
+	 * 移除所有特定类型的日志输出端
+	 * @param outputClass 输出端类对象
+	 */
+	public static <T extends LogOutput> void removeLogOutput(Class<T> outputClass) {
+		outputs.removeIf(output -> outputClass.isInstance(output));
+	}
+
 	// --- 默认输出端实现 ---
 
 	/**
 	 * 标准控制台输出 (System.out / System.err)
 	 * 使用 ANSI 转义码在 IDE 控制台和终端中显示颜色
-	 * <p>
-	 * 注意事项：
-	 * - IntelliJ IDEA / VS Code / Windows Terminal 原生支持 ANSI
-	 * - Android Logcat 不支持 ANSI，会自动降级为纯文本
-	 * - System.err 在多数 IDE 中已自带红色高亮，仅追加 ANSI 以保持一致性
 	 */
-	private static class StandardOutput implements LogOutput {
+	public static class StandardOutput implements LogOutput {
 		// ANSI 转义码常量
 		private static final String RESET  = "\033[0m";
 		private static final String RED    = "\033[91m";   // 亮红
