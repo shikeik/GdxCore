@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Set;
 
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.ui.Cell;
@@ -82,25 +83,26 @@ public class LogPanel extends VisTable {
 	// ============================================================
 
 	private void buildUI() {
-		// 第1行: 搜索栏
-		buildSearchRow();
-		// 第2行: 过滤工具栏 (等级按钮 + Tag + AutoScroll + Clear)
-		buildFilterRow();
-		// 第3行: Tag 展开面板 (默认隐藏)
-		buildTagPanel();
-		// 第4行: 日志显示区
+		// 采用紧凑布局：合并搜索栏与工具栏
+		buildToolbar();
+		// Tag 面板 (使用 PopupMenu，此处无需占位)
+
+		// 日志显示区
 		buildLogArea();
-		// 第5行: 命令输入 (Phase 2 占位)
+		// 命令输入
 		buildCommandRow();
 	}
 
-	// ---------- 搜索栏 ----------
-
-	private void buildSearchRow() {
+	/**
+	 * 合并搜索栏 + 过滤栏为单行工具栏 (紧凑布局)。
+	 */
+	private void buildToolbar() {
 		VisTable row = new VisTable();
+
+		// ── 左侧：搜索 + Tag ──
 		VisLabel icon = new VisLabel("Search:", "small");
 		searchField = new VisTextField("");
-		searchField.setMessageText("搜索 tag 或 message ...");
+		searchField.setMessageText("搜索...");
 		TextFieldPasteMenu.attach(searchField);
 		searchField.addListener(new ChangeListener() {
 			@Override
@@ -109,17 +111,20 @@ public class LogPanel extends VisTable {
 				filterDirty = true;
 			}
 		});
-		row.add(icon).padLeft(4).padRight(4);
-		row.add(searchField).growX().height(28);
-		add(row).growX().pad(2).row();
-	}
 
-	// ---------- 过滤工具栏 ----------
+		tagToggleBtn = new VisTextButton("Tags: All");
+		tagToggleBtn.addListener(new ClickListener() {
+			@Override
+			public void clicked(InputEvent event, float x, float y) {
+				toggleTagPanel();
+			}
+		});
 
-	private void buildFilterRow() {
-		VisTable row = new VisTable();
+		row.add(icon).padLeft(4).padRight(2);
+		row.add(searchField).minWidth(80).growX().height(24);
+		row.add(tagToggleBtn).padLeft(4).padRight(6).minWidth(68);
 
-		// 等级过滤按钮
+		// ── 右侧：等级按钮 + AutoScroll + Clear ──
 		DLog.Level[] levels = DLog.Level.values();
 		Color[] levelColors = { Color.WHITE, Color.CYAN, Color.YELLOW, Color.RED };
 		for (int i = 0; i < levels.length; i++) {
@@ -133,33 +138,21 @@ public class LogPanel extends VisTable {
 				}
 			});
 			levelBtns[i] = btn;
-			row.add(btn).padRight(3).minWidth(55);
+			row.add(btn).padRight(2).minWidth(48);
 		}
 
-		row.add().expandX(); // 弹性间距
-
-		// Tag 下拉切换
-		tagToggleBtn = new VisTextButton("Tags: All");
-		tagToggleBtn.addListener(new ClickListener() {
-			@Override
-			public void clicked(InputEvent event, float x, float y) {
-				toggleTagPanel();
-			}
-		});
-		row.add(tagToggleBtn).padRight(6).minWidth(80);
-
 		// AutoScroll
-		autoScrollBtn = new VisTextButton("Auto: ON");
+		autoScrollBtn = new VisTextButton("Auto");
 		autoScrollBtn.setColor(Color.GREEN);
 		autoScrollBtn.addListener(new ClickListener() {
 			@Override
 			public void clicked(InputEvent event, float x, float y) {
 				autoScroll = !autoScroll;
-				autoScrollBtn.setText(autoScroll ? "Auto: ON" : "Auto: OFF");
+				autoScrollBtn.setText(autoScroll ? "Auto" : "Auto");
 				autoScrollBtn.setColor(autoScroll ? Color.GREEN : Color.GRAY);
 			}
 		});
-		row.add(autoScrollBtn).padRight(6).minWidth(70);
+		row.add(autoScrollBtn).padRight(2).minWidth(45);
 
 		// Clear
 		VisTextButton clearBtn = new VisTextButton("Clear");
@@ -171,15 +164,9 @@ public class LogPanel extends VisTable {
 				filterDirty = true;
 			}
 		});
-		row.add(clearBtn).padRight(2).minWidth(50);
+		row.add(clearBtn).padRight(2).minWidth(45);
 
 		add(row).growX().pad(2).row();
-	}
-
-	// ---------- Tag 面板 ----------
-
-	private void buildTagPanel() {
-		// 旧版嵌入式面板已移除，改为浮动菜单 (toggleTagPanel)
 	}
 
 	/** 切换 Tag 筛选面板的显隐 */
@@ -189,17 +176,46 @@ public class LogPanel extends VisTable {
 			tagMenu = null;
 			return;
 		}
-		
+
 		rebuildTagMenu();
 		if (tagMenu != null) {
+			// 显示在按钮正下方，并水平居中
 			tagMenu.showMenu(getStage(), tagToggleBtn);
+
+			// showMenu 默认位置可能不理想，手动微调
+			// VisUI 的 showMenu 默认是对齐按钮左下角或鼠标位置
+			// 我们需要重新设置位置：X = 按钮中心X - 菜单宽度/2, Y = 按钮Y - 菜单高度
+
+			// 必须先 validate 才能获取正确尺寸
+			tagMenu.pack();
+
+			float btnCenterX = tagToggleBtn.getX() + tagToggleBtn.getWidth() / 2;
+			float btnBottomY = tagToggleBtn.getY();
+
+			// 转换到 Stage 坐标 (如果 tagToggleBtn 在嵌套 Group 中)
+			// 但这里 tagToggleBtn 和 tagMenu 都在同一个 LogPanel (VisTable) 中吗？
+			// 不，tagMenu 是 add 到 Stage 的。
+			// 所以需要将 btn 坐标转换到 Stage
+
+			Vector2 stagePos = tagToggleBtn.localToStageCoordinates(new Vector2(tagToggleBtn.getWidth() / 2, 0));
+
+			tagMenu.setPosition(
+				stagePos.x - tagMenu.getWidth() / 2,
+				stagePos.y - tagMenu.getHeight()
+			);
+
+			// 确保不超出屏幕边界 (简单处理)
+			if (tagMenu.getX() < 0) tagMenu.setX(0);
+			if (getStage() != null && tagMenu.getRight() > getStage().getWidth()) {
+				tagMenu.setX(getStage().getWidth() - tagMenu.getWidth());
+			}
 		}
 	}
 
 	/** 重建 Tag 面板中的按钮列表 (纵向多选菜单) */
 	private void rebuildTagMenu() {
 		tagMenu = new PopupMenu();
-		
+
 		// 收集当前所有出现过的 tag
 		Set<String> allTags = new LinkedHashSet<>();
 		for (LogEntry entry : DLog.getLogEntries()) {
@@ -212,7 +228,7 @@ public class LogPanel extends VisTable {
 
 		// 1. 控制行 (全选 / 全不选)
 		VisTable controlRow = new VisTable();
-		
+
 		VisTextButton selectAllBtn = new VisTextButton("全选");
 		selectAllBtn.addListener(new ClickListener() {
 			@Override
@@ -225,7 +241,7 @@ public class LogPanel extends VisTable {
 				updateTagToggleBtnText();
 			}
 		});
-		
+
 		VisTextButton deselectAllBtn = new VisTextButton("全不选");
 		deselectAllBtn.addListener(new ClickListener() {
 			@Override
@@ -248,12 +264,12 @@ public class LogPanel extends VisTable {
 			VisCheckBox checkBox = new VisCheckBox(tag);
 			// 视觉状态: 全选模式下全勾，否则看 tagFilter
 			checkBox.setChecked(showAllTags || tagFilter.contains(tag));
-			
+
 			checkBox.addListener(new ChangeListener() {
 				@Override
 				public void changed(ChangeEvent event, Actor actor) {
 					boolean isChecked = checkBox.isChecked();
-					
+
 					if (showAllTags) {
 						if (!isChecked) {
 							// 从全选模式中取消一个 -> 切换为"选中除此以外的所有"
@@ -269,13 +285,13 @@ public class LogPanel extends VisTable {
 							tagFilter.remove(tag);
 						}
 					}
-					
+
 					filterDirty = true;
 					updateTagToggleBtnText();
 					// 不关闭菜单，允许连续操作
 				}
 			});
-			
+
 			contentTable.add(checkBox).left().padLeft(5).padBottom(2).row();
 		}
 
@@ -284,8 +300,25 @@ public class LogPanel extends VisTable {
 		scrollPane.setFadeScrollBars(false);
 		scrollPane.setScrollingDisabled(true, false); // 禁止水平滚动
 
-		// 限制高度，避免占满屏幕
-		tagMenu.add(scrollPane).minWidth(150).maxHeight(300).pad(2);
+		// [优化] 自适应高度与宽度
+		// 1. 宽度：扩宽一点，不要太紧凑 (基础宽度 150 + 额外 50)
+		float menuWidth = 200f;
+
+		// 2. 高度：自适应条目数，最大显示 10 条
+		// 计算内容总高度: 表头(40) + 列表项(26 * N) + padding
+		// [修正] 增加单项高度预估，避免显示不全
+		float itemHeight = 32f; // VisCheckBox 实际占用约 30px
+		float headerHeight = 60f; // 全选/全不选行 + Padding
+
+		float totalContentHeight = headerHeight + allTags.size() * itemHeight;
+
+		// 限制最大高度 (10条)
+		float maxMenuHeight = headerHeight + 10 * itemHeight;
+
+		float menuHeight = Math.min(totalContentHeight, maxMenuHeight);
+
+		// 必须在 add 时指定 width/height，否则 PopupMenu 可能无法正确计算
+		tagMenu.add(scrollPane).width(menuWidth).height(menuHeight).pad(2);
 	}
 
 	private void onTagButtonClicked(String tag) {
