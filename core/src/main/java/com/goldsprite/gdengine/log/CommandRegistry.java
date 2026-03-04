@@ -152,4 +152,22 @@ public class CommandRegistry {
 	public static int getCommandCount() {
 		return commands.size();
 	}
+
+	/**
+	 * 获取指定命令的元信息 (用于显示 usage / description)。
+	 *
+	 * @param name 命令名 (大小写不敏感)
+	 * @return 命令信息, 未注册返回 null
+	 */
+	public static CommandInfo getCommandInfo(String name) {
+		if (name == null) return null;
+		return commands.get(name.trim().toLowerCase());
+	}
+
+	/**
+	 * 获取所有已注册命令的元信息列表 (用于命令提示面板)。
+	 */
+	public static List<CommandInfo> getAll() {
+		return new ArrayList<>(commands.values());
+	}
 }

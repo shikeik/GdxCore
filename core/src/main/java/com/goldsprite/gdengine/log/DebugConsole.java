@@ -38,9 +38,9 @@ public class DebugConsole extends Group {
 	private Container<Actor> contentContainer;
 
 	// 布局配置
-	private final float SAFE_PAD = 30f; // 安全边距
-	private final float MIN_HEIGHT = 100f;
-	private float panelHeight = 400f; // 面板当前高度设定
+	private final float SAFE_PAD = 8f; // 安全边距（紧凑）
+	private final float MIN_HEIGHT = 80f;
+	private float panelHeight = 300f; // 面板当前高度设定
 
 	// 动画物理
 	private float currentPanelY; // 面板当前的Y坐标
@@ -53,7 +53,7 @@ public class DebugConsole extends Group {
 
 	// 控制状态
 
-	float resizeHandleHeight = 14;
+	float resizeHandleHeight = 8;
 
 	private final TextureRegionDrawable backDrawable, back2Drawable, dragDrawable;
 
@@ -115,12 +115,12 @@ public class DebugConsole extends Group {
 				}
 			});
 
-		header.add(btnIntro).width(80).padRight(5);
-		header.add(btnLog).width(80).padRight(5);
-		header.add(btnInfo).width(80).padRight(5);
+		header.add(btnIntro).width(52).padRight(2);
+		header.add(btnLog).width(52).padRight(2);
+		header.add(btnInfo).width(52).padRight(2);
 		header.add().expandX();
-		header.add(btnClose).width(50);
-		panel.add(header).growX().height(40).pad(5).row();
+		header.add(btnClose).width(30);
+		panel.add(header).growX().height(26).pad(2).row();
 
 		// --- 内容区 ---
 		introLabel = new SelectableLabel("", "small"); introLabel.setWrap(true);
@@ -131,7 +131,7 @@ public class DebugConsole extends Group {
 
 		contentContainer = new Container<>();
 		contentContainer.fill();
-		panel.add(contentContainer).grow().pad(10).row();
+		panel.add(contentContainer).grow().pad(3).row();
 		showTab(introScroll);
 
 		// --- 底部拖拽条 ---

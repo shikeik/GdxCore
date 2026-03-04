@@ -4,9 +4,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
+import com.badlogic.gdx.scenes.scene2d.utils.FocusListener;
 import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextField;
 
@@ -39,6 +42,18 @@ import com.kotcrab.vis.ui.widget.VisTextField;
  */
 public class ConsoleTextField extends VisTable {
 
+    // ══════════════ 静态焦点追踪 ══════════════
+    /** 当前获得键盘焦点的 ConsoleTextField 数量 */
+    private static int focusedCount = 0;
+
+    /**
+     * 是否有任意 ConsoleTextField 持有键盘焦点。
+     * 外部可据此禁用全局按键处理（如 WASD 移动）。
+     */
+    public static boolean isAnyFocused() {
+        return focusedCount > 0;
+    }
+
     /** 内部输入框 */
     private final VisTextField textField;
 
@@ -50,6 +65,12 @@ public class ConsoleTextField extends VisTable {
 
     /** 提交回调 */
     private Consumer<String> onSubmit;
+
+    /** 文本变化回调（每次输入内容改变时触发，参数为当前文本） */
+    private Consumer<String> onTextChanged;
+
+    /** Tab 键回调（参数为当前文本，返回值通过外部 setText 完成补全） */
+    private Consumer<String> onTabPressed;
 
     /** 历史上限 */
     private int maxHistory = 50;
@@ -69,7 +90,19 @@ public class ConsoleTextField extends VisTable {
         // 自动附加长按上下文菜单（Android 友好）
         TextFieldPasteMenu.attach(textField);
 
-        // 注册键盘事件: Enter 提交 + ↑↓ 历史翻阅
+        // 焦点追踪：获得/失去键盘焦点时更新静态计数器
+        textField.addListener(new FocusListener() {
+            @Override
+            public void keyboardFocusChanged(FocusEvent event, Actor actor, boolean focused) {
+                if (focused) {
+                    focusedCount++;
+                } else {
+                    focusedCount = Math.max(0, focusedCount - 1);
+                }
+            }
+        });
+
+        // 注册键盘事件: Enter 提交 + ↑↓ 历史翻阅 + Tab 补全
         textField.addListener(new InputListener() {
             @Override
             public boolean keyDown(InputEvent event, int keycode) {
@@ -84,6 +117,25 @@ public class ConsoleTextField extends VisTable {
                 if (keycode == Input.Keys.DOWN) {
                     navigateHistory(1);
                     return true;
+                }
+                if (keycode == Input.Keys.TAB) {
+                    if (onTabPressed != null) {
+                        onTabPressed.accept(textField.getText());
+                    }
+                    return true;
+                }
+                return false;
+            }
+
+            @Override
+            public boolean keyTyped(InputEvent event, char character) {
+                // 在下一帧触发文本变化回调（此时 TextField 文本已更新）
+                if (onTextChanged != null && character != '\r' && character != '\n' && character != '\t') {
+                    Gdx.app.postRunnable(() -> {
+                        if (onTextChanged != null) {
+                            onTextChanged.accept(textField.getText());
+                        }
+                    });
                 }
                 return false;
             }
@@ -101,6 +153,16 @@ public class ConsoleTextField extends VisTable {
     /** 设置提交回调（Enter 键触发） */
     public void setOnSubmit(Consumer<String> callback) {
         this.onSubmit = callback;
+    }
+
+    /** 设置文本变化回调（每次内容改变时触发，参数为当前文本） */
+    public void setOnTextChanged(Consumer<String> callback) {
+        this.onTextChanged = callback;
+    }
+
+    /** 设置 Tab 键回调（参数为当前文本，外部可调用 setText 完成补全） */
+    public void setOnTabPressed(Consumer<String> callback) {
+        this.onTabPressed = callback;
     }
 
     /** 设置占位符提示文字 */
