@@ -1,6 +1,7 @@
 package com.goldsprite.gdengine.log;
 
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
@@ -474,7 +475,8 @@ public class DLog {
 	 */
 	public static String formatTime(String pattern) {
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
-		return LocalTime.now().format(formatter);
+		// 强制使用上海时区 (GMT+8)，解决部分环境(如Termux)下时区不正确的问题
+		return LocalTime.now(ZoneId.of("Asia/Shanghai")).format(formatter);
 	}
 
 	public static String formatString(Object... values) {
