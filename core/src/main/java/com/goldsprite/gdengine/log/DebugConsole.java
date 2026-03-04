@@ -14,6 +14,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
+import java.util.function.Supplier;
+
 import com.goldsprite.gdengine.assets.ColorTextureUtils;
 import com.goldsprite.gdengine.assets.VisUIHelper;
 import com.goldsprite.gdengine.ui.widget.HoverFocusScrollPane;
@@ -29,10 +31,13 @@ public class DebugConsole extends Group {
 	public enum State { COLLAPSED, EXPANDED }
 	public State currentState = State.COLLAPSED;
 
+	/** 日志面板工厂 — 下游项目可在构造前设置，注入自定义 LogPanel 替代品 */
+	public static Supplier<? extends Actor> logPanelFactory;
+
 	// UI 组件
 	private VisTextButton fpsBtn;
 	private VisTable panel; // 滑动面板
-	private LogPanel logPanel;  // [Phase3] LOG 标签页使用 LogPanel
+	private Actor logPanelActor;  // LOG 标签页面板（可被外部替换）
 	private SelectableLabel infoLabel, introLabel;
 	private ScrollPane infoScroll, introScroll;
 	private Container<Actor> contentContainer;
@@ -101,7 +106,7 @@ public class DebugConsole extends Group {
 		// --- 顶部栏 ---
 		Table header = new Table();
 		VisTextButton btnIntro = createTabBtn("INTRO", () -> showTab(introScroll));
-		VisTextButton btnLog = createTabBtn("LOG", () -> showTab(logPanel));
+		VisTextButton btnLog = createTabBtn("LOG", () -> showTab(logPanelActor));
 		VisTextButton btnInfo = createTabBtn("INFO", () -> showTab(infoScroll));
 
 		// [Phase3] AutoScroll / Clear 已内置于 LogPanel，此处仅保留标签页按钮 + 关闭按钮
@@ -125,7 +130,7 @@ public class DebugConsole extends Group {
 		// --- 内容区 ---
 		introLabel = new SelectableLabel("", "small"); introLabel.setWrap(true);
 		introScroll = new HoverFocusScrollPane(introLabel);
-		logPanel = new LogPanel();  // [Phase3] 替换旧的 logLabel + logScroll
+		logPanelActor = logPanelFactory != null ? logPanelFactory.get() : new LogPanel();
 		infoLabel = new SelectableLabel("", "small");
 		infoScroll = new HoverFocusScrollPane(infoLabel);
 

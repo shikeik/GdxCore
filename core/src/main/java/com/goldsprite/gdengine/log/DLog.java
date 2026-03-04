@@ -33,17 +33,23 @@ public class DLog {
 		"ToastUI Y",
 		"ZipDownLoader Y",
 
-		//SandTank
-		"VirtualKeyboard Y",
-		"Settings Y",
-		"InputManager Y",
-
 		// Test
 		"TEST Y",
 		"VERIFY Y",
 		"Test1 Y",
 		"VisualCheck Y",
 	};
+
+	/** 运行时动态注册的白名单条目（供下游项目注入业务标签） */
+	private static final List<String> extraShowTags = new CopyOnWriteArrayList<>();
+
+	/**
+	 * 动态添加白名单标签（格式: "TagName Y" 或 "TagName N"）。
+	 * <p>应在 initUI() 之前调用。
+	 */
+	public static void addShowTag(String tagLine) {
+		if (tagLine != null && !tagLine.isEmpty()) extraShowTags.add(tagLine);
+	}
 
 	public static String LOG_TAG = GDEngineConfig.getProjectName();
 	private static final Logger logger = new Logger(LOG_TAG);
@@ -64,8 +70,6 @@ public class DLog {
 
 	static {
 		blackList.add("拦截");
-		blackList.add("InputManager");
-		blackList.add("VirtualKeyboard");
 		// 大厅心跳/线路级别日志默认拦截，避免每30秒刷屏
 		blackList.add("PhoenixHB");
 		blackList.add("PhoenixWire");
@@ -447,15 +451,16 @@ public class DLog {
 			return blackList.contains(tag);
 		}
 
-		// 白名单模式逻辑 (原有)
+		// 白名单模式逻辑 (原有 + 动态注册)
 		for (String tagInfo : showTags) {
 			String[] splits = tagInfo.split(" ");
 			if (splits.length < 2) continue;
-
-			String key = splits[0];
-			String show = splits[1];
-			if (key.equals(tag))
-				return !passStr.equals(show);
+			if (splits[0].equals(tag)) return !passStr.equals(splits[1]);
+		}
+		for (String tagInfo : extraShowTags) {
+			String[] splits = tagInfo.split(" ");
+			if (splits.length < 2) continue;
+			if (splits[0].equals(tag)) return !passStr.equals(splits[1]);
 		}
 
 		return true; // 白名单模式下，未找到则默认拦截
