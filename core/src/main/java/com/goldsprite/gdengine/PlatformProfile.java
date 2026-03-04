@@ -80,6 +80,9 @@ public class PlatformProfile {
     /** 触摸目标最小尺寸（dp） */
     public float minTouchTarget = 32f;
 
+    /** UI 安全区域边距 (适配异形屏/圆角屏) */
+    public float safeAreaMargin = 8f;
+
     // ══════════════ 工厂方法 ══════════════
 
     /**
@@ -93,6 +96,7 @@ public class PlatformProfile {
             p.ideConsoleViewportScale = 1.4f;
             p.splitBarThickness = 15f;
             p.minTouchTarget = 48f;
+            p.safeAreaMargin = 32f; // Android 端预设较大边距适配异形屏
         }
         // 桌面端保持字段默认值
         return p;

@@ -43,7 +43,7 @@ public class DebugConsole extends Group {
 	private Container<Actor> contentContainer;
 
 	// 布局配置
-	private final float SAFE_PAD = 8f; // 安全边距（紧凑）
+	private final float SAFE_PAD; // 安全边距（从 PlatformProfile 获取）
 	private final float MIN_HEIGHT = 80f;
 	private float panelHeight = 300f; // 面板当前高度设定
 
@@ -64,6 +64,8 @@ public class DebugConsole extends Group {
 
 	public DebugConsole() {
 		inst = this;
+		this.SAFE_PAD = com.goldsprite.gdengine.PlatformProfile.get().safeAreaMargin;
+
 		// 1. 资源准备
 		backDrawable = ColorTextureUtils.createColorDrawable(Color.valueOf("00000099"));
 		back2Drawable = ColorTextureUtils.createColorDrawable(Color.valueOf("00000000"));
