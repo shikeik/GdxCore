@@ -10,6 +10,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.ui.Cell;
+import com.badlogic.gdx.scenes.scene2d.ui.Value;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.goldsprite.gdengine.PlatformProfile;
@@ -17,7 +18,10 @@ import com.goldsprite.gdengine.ui.widget.ConsoleTextField;
 import com.goldsprite.gdengine.ui.widget.HoverFocusScrollPane;
 import com.goldsprite.gdengine.ui.widget.SelectableLabel;
 import com.goldsprite.gdengine.ui.widget.TextFieldPasteMenu;
+import com.kotcrab.vis.ui.widget.PopupMenu;
+import com.kotcrab.vis.ui.widget.VisCheckBox;
 import com.kotcrab.vis.ui.widget.VisLabel;
+import com.kotcrab.vis.ui.widget.VisScrollPane;
 import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.kotcrab.vis.ui.widget.VisTextField;
@@ -61,8 +65,7 @@ public class LogPanel extends VisTable {
 	private boolean filterDirty = true; // 筛选条件变更标志
 
 	// ---- Tag 面板 ----
-	private VisTable tagPanel;
-	private boolean tagPanelVisible = false;
+	private PopupMenu tagMenu;
 
 	// ---- 命令输入 ----
 	private ConsoleTextField consoleInput;
@@ -174,86 +177,117 @@ public class LogPanel extends VisTable {
 	// ---------- Tag 面板 ----------
 
 	private void buildTagPanel() {
-		tagPanel = new VisTable();
-		tagPanel.setVisible(false);
-		add(tagPanel).growX().pad(0).row();
+		// 旧版嵌入式面板已移除，改为浮动菜单 (toggleTagPanel)
 	}
 
 	/** 切换 Tag 筛选面板的显隐 */
 	private void toggleTagPanel() {
-		tagPanelVisible = !tagPanelVisible;
-		rebuildTagPanel();
-		tagPanel.setVisible(tagPanelVisible);
-		// 更新按钮高度的cell
-		Cell<?> cell = getCell(tagPanel);
-		if (cell != null) {
-			cell.height(tagPanelVisible ? 0 : 0); // 自适应
+		if (tagMenu != null && tagMenu.getParent() != null) {
+			tagMenu.remove();
+			tagMenu = null;
+			return;
 		}
-		invalidateHierarchy();
+		
+		rebuildTagMenu();
+		if (tagMenu != null) {
+			tagMenu.showMenu(getStage(), tagToggleBtn);
+		}
 	}
 
-	/** 重建 Tag 面板中的按钮列表 */
-	private void rebuildTagPanel() {
-		tagPanel.clearChildren();
-		if (!tagPanelVisible) return;
-
+	/** 重建 Tag 面板中的按钮列表 (纵向多选菜单) */
+	private void rebuildTagMenu() {
+		tagMenu = new PopupMenu();
+		
 		// 收集当前所有出现过的 tag
 		Set<String> allTags = new LinkedHashSet<>();
 		for (LogEntry entry : DLog.getLogEntries()) {
 			allTags.add(entry.tag);
 		}
 
-		// "All" 按钮
-		VisTextButton allBtn = new VisTextButton("All");
-		allBtn.setColor(showAllTags ? Color.GREEN : Color.GRAY);
-		allBtn.addListener(new ClickListener() {
+		// 内容容器
+		VisTable contentTable = new VisTable();
+		contentTable.left().top();
+
+		// 1. 控制行 (全选 / 全不选)
+		VisTable controlRow = new VisTable();
+		
+		VisTextButton selectAllBtn = new VisTextButton("全选");
+		selectAllBtn.addListener(new ClickListener() {
 			@Override
 			public void clicked(InputEvent event, float x, float y) {
 				showAllTags = true;
 				tagFilter.clear();
 				filterDirty = true;
-				rebuildTagPanel();
+				if (tagMenu != null) tagMenu.remove(); // 关闭重建
+				toggleTagPanel(); // 重新打开
 				updateTagToggleBtnText();
 			}
 		});
-		tagPanel.add(allBtn).padRight(3).padBottom(2);
+		
+		VisTextButton deselectAllBtn = new VisTextButton("全不选");
+		deselectAllBtn.addListener(new ClickListener() {
+			@Override
+			public void clicked(InputEvent event, float x, float y) {
+				showAllTags = false;
+				tagFilter.clear();
+				filterDirty = true;
+				if (tagMenu != null) tagMenu.remove();
+				toggleTagPanel();
+				updateTagToggleBtnText();
+			}
+		});
 
-		// 各 tag 按钮
+		controlRow.add(selectAllBtn).padRight(10);
+		controlRow.add(deselectAllBtn);
+		contentTable.add(controlRow).left().pad(5).row();
+
+		// 2. Tag 列表 (纵向 CheckBox)
 		for (String tag : allTags) {
-			boolean selected = !showAllTags && tagFilter.contains(tag);
-			VisTextButton btn = new VisTextButton(tag);
-			btn.setColor(showAllTags ? Color.LIGHT_GRAY : (selected ? Color.GREEN : Color.GRAY));
-			btn.addListener(new ClickListener() {
+			VisCheckBox checkBox = new VisCheckBox(tag);
+			// 视觉状态: 全选模式下全勾，否则看 tagFilter
+			checkBox.setChecked(showAllTags || tagFilter.contains(tag));
+			
+			checkBox.addListener(new ChangeListener() {
 				@Override
-				public void clicked(InputEvent event, float x, float y) {
-					onTagButtonClicked(tag);
+				public void changed(ChangeEvent event, Actor actor) {
+					boolean isChecked = checkBox.isChecked();
+					
+					if (showAllTags) {
+						if (!isChecked) {
+							// 从全选模式中取消一个 -> 切换为"选中除此以外的所有"
+							showAllTags = false;
+							tagFilter.clear();
+							tagFilter.addAll(allTags);
+							tagFilter.remove(tag);
+						}
+					} else {
+						if (isChecked) {
+							tagFilter.add(tag);
+						} else {
+							tagFilter.remove(tag);
+						}
+					}
+					
+					filterDirty = true;
+					updateTagToggleBtnText();
+					// 不关闭菜单，允许连续操作
 				}
 			});
-			tagPanel.add(btn).padRight(3).padBottom(2);
+			
+			contentTable.add(checkBox).left().padLeft(5).padBottom(2).row();
 		}
 
-		tagPanel.row();
+		// 包装进滚动窗格
+		VisScrollPane scrollPane = new VisScrollPane(contentTable);
+		scrollPane.setFadeScrollBars(false);
+		scrollPane.setScrollingDisabled(true, false); // 禁止水平滚动
+
+		// 限制高度，避免占满屏幕
+		tagMenu.add(scrollPane).minWidth(150).maxHeight(300).pad(2);
 	}
 
 	private void onTagButtonClicked(String tag) {
-		if (showAllTags) {
-			// 从 All 模式切换到单 tag 模式
-			showAllTags = false;
-			tagFilter.clear();
-			tagFilter.add(tag);
-		} else {
-			if (tagFilter.contains(tag)) {
-				tagFilter.remove(tag);
-				if (tagFilter.isEmpty()) {
-					showAllTags = true; // 全部取消 → 回到 All
-				}
-			} else {
-				tagFilter.add(tag);
-			}
-		}
-		filterDirty = true;
-		rebuildTagPanel();
-		updateTagToggleBtnText();
+		// Deprecated by new UI
 	}
 
 	private void updateTagToggleBtnText() {
