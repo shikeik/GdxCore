@@ -62,8 +62,9 @@ subprojects {
         publications {
             mavenJava(MavenPublication) {
                 from components.java
-                groupId = "${rootProject.properties.jitpackGroup}"
-                artifactId = project.name
+                // JitPack 单子模块项目会合并到根级: com.github.shikeik:GdxCore
+                groupId = 'com.github.shikeik'
+                artifactId = rootProject.name   // 'GdxCore'
                 version = project.version
             }
         }
