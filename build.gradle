@@ -7,13 +7,12 @@
 //   com.github.shikeik.GdxCore:core      — 引擎核心（日志、屏幕、UI、资源工具等）
 //   com.github.shikeik.GdxCore:input     — 通用输入组件（SmartInput 系列）
 
-// JitPack 环境下跳过 GdxGradle 插件（仅工具任务，publishToMavenLocal 不需要）
+// JitPack 环境下跳过 GdxGradle 插件（仅工具任务，JitPack 构建不需要）
 def isJitPack = System.getenv("JITPACK") == "true"
 
 buildscript {
     repositories {
         google()
-        mavenLocal()
         mavenCentral()
         gradlePluginPortal()
         maven { url 'https://maven.aliyun.com/repository/public/' }
@@ -80,7 +79,6 @@ subprojects {
 
     repositories {
         google()
-        mavenLocal()
         mavenCentral()
         gradlePluginPortal()
         maven { url 'https://maven.aliyun.com/repository/public/' }
