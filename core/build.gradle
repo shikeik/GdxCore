@@ -11,10 +11,10 @@ dependencies {
     // 若将来需要 TexturePacker 等工具，应放到独立的 tools 模块或 buildSrc
     api "com.kotcrab.vis:vis-ui:${rootProject.properties.visUIVersion}"
     api "com.badlogicgames.gdx-controllers:gdx-controllers-core:${rootProject.properties.gdxControllersVersion}"
-    api("com.github.raeleus:TenPatch:5.2.3") {
-        exclude group: 'org.lwjgl'      // 排除 LWJGL3 (org.lwjgl group)
-        exclude module: 'demo'           // demo 模块传递引入 gdx-backend-lwjgl3
-    }
+//    api("com.github.raeleus:TenPatch:5.2.3") {
+//        exclude group: 'org.lwjgl'      // 排除 LWJGL3 (org.lwjgl group)
+//        exclude module: 'demo'           // demo 模块传递引入 gdx-backend-lwjgl3
+//    }
     api "com.esotericsoftware.spine:spine-libgdx:${rootProject.properties.spineVersion}"
     api 'org.nanohttpd:nanohttpd:2.3.1'
 }

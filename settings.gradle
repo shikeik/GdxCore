@@ -12,3 +12,4 @@ if (_compositeBuildScript.exists()) {
 }
 
 autoIncludeLocalLib('../GdxGradle', 'com.github.shikeik', 'com.github.shikeik:GdxGradle')
+autoIncludeLocalLib('../GdxUI',     'com.github.shikeik', 'com.github.shikeik:GdxUI')
