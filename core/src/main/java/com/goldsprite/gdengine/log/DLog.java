@@ -24,13 +24,20 @@ public class DLog {
 	public static boolean singleMode = false;
 	public static String singleTag = "Default";
 	// [新增] 黑白名单模式控制
-	public static boolean isBlackListMode = true; // 默认黑名单模式
+	public static boolean isBlackListMode = false; // 默认白名单模式
 	public static List<String> blackList = new CopyOnWriteArrayList<>(); // 黑名单列表
 	public static String[] showTags = {
 		"Default Y",
 		"拦截 N",
 
-		//GDEngine
+		// 服务端核心标签
+		"Server Y",
+		"Auth Y",
+		"Netcode Y",
+		"DataManager Y",
+		"Chat Y",
+
+		// GDEngine
 		"ToastUI Y",
 		"ZipDownLoader Y",
 
@@ -264,17 +271,22 @@ public class DLog {
 
 		@Override
 		public void onLog(Level level, String tag, String msg) {
+			String formatted = formatLog(level, tag, msg);
+			if (level == Level.ERROR) {
+				System.err.println(formatted);
+			} else {
+				System.out.println(formatted);
+			}
+		}
+
+		/**
+		 * 将日志条目格式化为带颜色（或纯文本）的字符串，供子类复用。
+		 */
+		protected String formatLog(Level level, String tag, String msg) {
 			String time = formatTime("HH:mm:ss:SSS");
 
 			if (!ANSI_ENABLED) {
-				// Android 等不支持 ANSI 的平台：纯文本输出
-				String plain = String.format("[%s] [%s] [%s] %s", level.name(), time, tag, msg);
-				if (level == Level.ERROR) {
-					System.err.println(plain);
-				} else {
-					System.out.println(plain);
-				}
-				return;
+				return String.format("[%s] [%s] [%s] %s", level.name(), time, tag, msg);
 			}
 
 			// 根据级别选择颜色
@@ -304,22 +316,14 @@ public class DLog {
 			if ("UserProject".equals(tag)) {
 				tagColor = ORANGE;
 			} else if ("AutoTest".equals(tag)) {
-				// AutoTest 的 PASS/FAIL 已通过 level 区分，Tag 用绿色突出
 				tagColor = GREEN;
 			}
 
-			// 组装带 ANSI 颜色的消息: [灰色时间] [彩色级别] [Tag颜色Tag] 消息
-			String fullMsg = String.format("%s[%s]%s %s[%s]%s %s[%s]%s %s%s%s",
+			return String.format("%s[%s]%s %s[%s]%s %s[%s]%s %s%s%s",
 				GRAY, time, RESET,
 				levelColor, levelLabel, RESET,
 				tagColor, tag, RESET,
 				levelColor, msg, RESET);
-
-			if (level == Level.ERROR) {
-				System.err.println(fullMsg);
-			} else {
-				System.out.println(fullMsg);
-			}
 		}
 	}
 
